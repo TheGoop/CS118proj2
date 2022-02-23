@@ -39,13 +39,13 @@ int main(int argc, char** argv){
     std::cerr << "ERROR: bind()" << std::endl;
     exit(1);
   }
-  while(1){
+  while (1){
     char buf[1024]; //extra space to be safe
     struct sockaddr addr;
     socklen_t addr_len = sizeof(struct sockaddr);
     
     ssize_t length = recvfrom(serverSockFd, buf, 1024, 0, &addr, &addr_len);
-    // std::string str(buf);
+
     std::cerr << "DATA reveived " << length << " bytes from : "<< 
       inet_ntoa(((struct sockaddr_in*)&addr)->sin_addr) << std::endl;
     
