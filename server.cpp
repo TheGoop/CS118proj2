@@ -7,11 +7,13 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <csignal>
 
 void runError(int code);
 void endProgram();
 void makeConnection();
 void makeSocket();
+void signalHandler(int signum);
 
 //pointer to our file writers for each connection
 std::vector<std::ofstream*> connections;
@@ -19,26 +21,61 @@ std::vector<std::ofstream*> connections;
 //directory to store files
 std::string direc;
 
-//socket
 int sock;
+
 int port;
+
+int res;
+
+int buffSize = 512;
 
 //address
 struct sockaddr_in servaddr;
 
-//TODO process wrong port numbers
 int main(int argc, char** argv)
 {
+    char buf[buffSize];
     if (argc != 3)
     {
         runError(1);
     }
-    port = std::stoi(argv[1]);
+    
+    //reads port, tries to catch invalid port numbers
+    //only catches port numbers that are not numbers
+    //TODO find other invalid port numbers?
+    try {
+        port = std::stoi(argv[1]);
+    }
+    catch (const std::invalid_argument& ia)
+    {
+        runError(2);
+    }
+    
     direc = argv[2];
     std::cerr << argv[1] << std::endl << argv[2] << std::endl;
+    
     makeSocket();
+
+    signal(SIGQUIT, signalHandler);
+    while (1)
+    {
+        res = recv(sock, buf, buffSize, 0);
+        if (res == -1)
+        {
+            runError(5);
+        }
+
+        std::cerr << "buffer: " << buf << std::endl;
+    }
+
     endProgram();
     return 0;
+}
+
+void signalHandler(int signum)
+{
+    endProgram();
+    exit(0);
 }
 
 void makeSocket()
@@ -59,6 +96,7 @@ void makeSocket()
 }
 
 //put anything we need to close here
+//should always be run before any exits
 void endProgram()
 {
     for (int x = 0; x < connections.size(); x++)
@@ -93,6 +131,10 @@ void runError(int code)
         break;
     case 4:
         std::cerr << "ERROR: Bind Creation Failed!" << std::endl;
+        break;
+
+    case 5:
+        std::cerr << "ERROR: Socket Reading Failed!" << std::endl;
         break;
     }
     endProgram();

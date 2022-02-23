@@ -8,6 +8,7 @@ all: server client
 
 server: $(CLASSES)
 	$(CXX) -o $@ $^ $(CXXFLAGS) $@.cpp
+	$(CXX) -o dumClient $^ $(CXXFLAGS) dummyclient.cpp
 
 client: $(CLASSES)
 	$(CXX) -o $@ $^ $(CXXFLAGS) $@.cpp
@@ -18,3 +19,4 @@ clean:
 dist: tarball
 tarball: clean
 	tar -cvzf /tmp/$(USERID).tar.gz --exclude=./.vagrant . && mv /tmp/$(USERID).tar.gz .
+	
