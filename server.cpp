@@ -6,6 +6,7 @@
 #include <vector>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netdb.h>
 #include <unistd.h>
 #include <csignal>
 
@@ -57,15 +58,17 @@ int main(int argc, char** argv)
     makeSocket();
 
     signal(SIGQUIT, signalHandler);
-    while (1)
-    {
-        res = recv(sock, buf, buffSize, 0);
-        if (res == -1)
-        {
-            runError(5);
-        }
+    while (1) {
+        char buf[1024]; //extra space to be safe
+        struct sockaddr addr;
+        socklen_t addr_len = sizeof(struct sockaddr);
 
-        std::cerr << "buffer: " << buf << std::endl;
+        ssize_t length = recvfrom(serverSockFd, buf, 1024, 0, &addr, &addr_len);
+        // std::string str(buf);
+        std::cerr << "DATA reveived " << length << " bytes from : " << inet_ntoa(((struct sockaddr_in*) & addr)->sin_addr) << std::endl;
+
+        length = sendto(serverSockFd, "ACK", strlen("ACK"), MSG_CONFIRM, &addr, addr_len);
+        std::cout << length << " bytes ACK sent" << std::endl;
     }
 
     endProgram();
@@ -80,17 +83,19 @@ void signalHandler(int signum)
 
 void makeSocket()
 {
-    memset(&servaddr, 0, sizeof(servaddr));
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = INADDR_ANY;
-    servaddr.sin_port = htons(port);
+    struct addrinfo hints;
+    memset(&hints, '\0', sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_flags = AI_PASSIVE;
 
-    if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
-    {
+    struct addrinfo* myAddrInfo;
+    int ret;
+    if ((ret = getaddrinfo(NULL, direc.c_str(), &hints, &myAddrInfo)) != 0) {
         runError(3);
     }
-    if ((bind(sock, (const struct sockaddr*)&servaddr, sizeof(servaddr))) == -1)
-    {
+
+    if (bind(sock, myAddrInfo->ai_addr, myAddrInfo->ai_addrlen) == -1) {
         runError(4);
     }
 }
