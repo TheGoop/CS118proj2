@@ -6,15 +6,18 @@
 #include <vector>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
 #include <csignal>
+#include <math.h>
 
 void runError(int code);
 void endProgram();
 void makeConnection();
 void makeSocket();
 void signalHandler(int signum);
+void processHeader(unsigned char*);
 
 //pointer to our file writers for each connection
 std::vector<std::ofstream*> connections;
@@ -24,18 +27,30 @@ std::string direc;
 
 int sock;
 
-int port;
+char* port;
 
 int res;
 
 int buffSize = 512;
+
+//ints for handling headers
+uint32_t currSeq;
+uint32_t currAck;
+uint16_t currID;
+//0 is ack, 1 is syn, 2 is fin
+bool flags[3];
 
 //address
 struct sockaddr_in servaddr;
 
 int main(int argc, char** argv)
 {
-    char buf[buffSize];
+    unsigned char test[] = {
+        0x00, 0x00, 0x08, 0x52,
+        0x00, 0x00, 0x15, 0x32,
+        0x10, 0x01, 0x00, 0x02};
+    processHeader(test);
+    /*char buf[buffSize];
     if (argc != 3)
     {
         runError(1);
@@ -45,7 +60,7 @@ int main(int argc, char** argv)
     //only catches port numbers that are not numbers
     //TODO find other invalid port numbers?
     try {
-        port = std::stoi(argv[1]);
+        port = argv[1];
     }
     catch (const std::invalid_argument& ia)
     {
@@ -57,21 +72,26 @@ int main(int argc, char** argv)
     
     makeSocket();
 
+    makeConnection();
+
     signal(SIGQUIT, signalHandler);
     while (1) {
-        char buf[1024]; //extra space to be safe
+        char buf[1024];
+        memset(buf, '\0', 1024);
         struct sockaddr addr;
         socklen_t addr_len = sizeof(struct sockaddr);
 
-        ssize_t length = recvfrom(serverSockFd, buf, 1024, 0, &addr, &addr_len);
-        // std::string str(buf);
+        ssize_t length = recvfrom(sock, buf, 1024, 0, &addr, &addr_len);
         std::cerr << "DATA reveived " << length << " bytes from : " << inet_ntoa(((struct sockaddr_in*) & addr)->sin_addr) << std::endl;
+        (*connections[0]).write(buf, 1024);
 
-        length = sendto(serverSockFd, "ACK", strlen("ACK"), MSG_CONFIRM, &addr, addr_len);
+        processHeader(buf);
+
+        length = sendto(sock, "ACK", strlen("ACK"), MSG_CONFIRM, &addr, addr_len);
         std::cout << length << " bytes ACK sent" << std::endl;
     }
 
-    endProgram();
+    endProgram();*/
     return 0;
 }
 
@@ -81,8 +101,33 @@ void signalHandler(int signum)
     exit(0);
 }
 
+//0-3 chars are seq number
+//4-7 chars are ack number
+//8-9 chars are connection ID
+//10 is unused
+//last 3 bits of 11 are ack, syn, and fin
+void processHeader(unsigned char *buf)
+{
+    currSeq = (buf[0] << 24 | buf[1] << 16 | buf[2] << 8 | buf[3]);
+
+    currAck = (buf[4] << 24 | buf[5] << 16 | buf[6] << 8 | buf[7]);
+
+    currID = (buf[8] << 8 | buf[9]);
+
+    flags[0] = (buf[11] >> 2) & 1;
+    flags[1] = (buf[11] >> 1) & 1;
+    flags[2] = (buf[11] >> 0) & 1;
+
+    std::cerr << currSeq << std::endl;
+    std::cerr << currAck << std::endl;
+    std::cerr << currID << std::endl;
+    std::cerr << flags[0] << flags[1] << flags[2] << std::endl;
+}
+
 void makeSocket()
 {
+    sock = socket(AF_INET, SOCK_DGRAM, 0);
+
     struct addrinfo hints;
     memset(&hints, '\0', sizeof(hints));
     hints.ai_family = AF_INET;
@@ -91,8 +136,9 @@ void makeSocket()
 
     struct addrinfo* myAddrInfo;
     int ret;
-    if ((ret = getaddrinfo(NULL, direc.c_str(), &hints, &myAddrInfo)) != 0) {
-        runError(3);
+    if ((ret = getaddrinfo(NULL, port, &hints, &myAddrInfo)) != 0) {
+        std::cerr << gai_strerror(ret) << std::endl;
+        runError(6);
     }
 
     if (bind(sock, myAddrInfo->ai_addr, myAddrInfo->ai_addrlen) == -1) {
@@ -118,6 +164,7 @@ void makeConnection()
 {
     connections.push_back(new std::ofstream(direc + "/" + 
         std::to_string(connections.size() + 1) + ".file"));
+    std::cerr << "connection made" << std::endl;
 }
 
 //simple error function
@@ -140,6 +187,10 @@ void runError(int code)
 
     case 5:
         std::cerr << "ERROR: Socket Reading Failed!" << std::endl;
+        break;
+
+    case 6:
+        std::cerr << "ERROR: Incorrect Address!" << std::endl;
         break;
     }
     endProgram();
