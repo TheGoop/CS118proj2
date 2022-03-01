@@ -16,6 +16,15 @@ Starter code from Tianyuan Yu's Week 7 slides
 #include <inttypes.h>
 #include <cstring>
 
+#define MAX_SIZE 524
+#define HEADER_SIZE 12
+#define MAX_SEQ_ACK_NUMBER 102400
+#define RETRANS_TIMEOUT 0.5 
+#define INITIAL_CWND 512
+#define MAX_CWND 51200
+#define RWND 51200
+#define INITIAL_SSTHRESH 10000
+
 int main(int argc, char** argv){
 	//check arguments
 	if(argc != 2){
@@ -45,11 +54,11 @@ int main(int argc, char** argv){
 	struct addrinfo* myAddrInfo;
 	int ret;
 	if ((ret = getaddrinfo(NULL, argv[1], &hints, &myAddrInfo)) != 0){
-		std::cerr << "ERROR: getaddrinfo()" << std::endl;
+		std::cerr << "ERROR: getaddrinfo" << std::endl;
 		exit(1);
 	}
 	if (bind(serverSockFd, myAddrInfo->ai_addr, myAddrInfo->ai_addrlen) == -1){
-		std::cerr << "ERROR: bind()" << std::endl;
+		std::cerr << "ERROR: bind" << std::endl;
 		exit(1);
 	}
 	while (1){

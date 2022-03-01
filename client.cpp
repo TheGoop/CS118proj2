@@ -19,6 +19,15 @@ Starter code from Tianyuan Yu's Week 7 slides
 #include <sys/stat.h>
 #include <time.h>
 
+#define MAX_SIZE 524
+#define HEADER_SIZE 12
+#define MAX_SEQ_ACK_NUMBER 102400
+#define RETRANS_TIMEOUT 0.5 
+#define INITIAL_CWND 512
+#define MAX_CWND 51200
+#define RWND 51200
+#define INITIAL_SSTHRESH 10000
+
 int main(int argc, char** argv){
 	// check if received three command arguments
 	if (argc != 4) {
