@@ -1,5 +1,5 @@
 /* 
-From Tianyuan Yu's Week 7 slides
+Starter code from Tianyuan Yu's Week 7 slides
 */
 
 #include <string>
@@ -17,41 +17,54 @@ From Tianyuan Yu's Week 7 slides
 #include <cstring>
 
 int main(int argc, char** argv){
-  //check arguments
-  if(argc != 2){
-    std::cerr <<"ERROR: Usage: "<< argv[0] << " <PORT> "<< std::endl;
-    exit(1);
-  }
-  //UDP socket
-  int serverSockFd = socket(AF_INET, SOCK_DGRAM, 0);
-  struct addrinfo hints;
-  memset(&hints, '\0', sizeof(hints));
-  hints.ai_family = AF_INET;
-  hints.ai_socktype = SOCK_DGRAM;
-  hints.ai_flags = AI_PASSIVE;
-  struct addrinfo* myAddrInfo;
-  int ret;
-  if ((ret = getaddrinfo(NULL, argv[1], &hints, &myAddrInfo)) != 0){
-    std::cerr << "error" << std::endl;
-    exit(1);
-  }
-  if (bind(serverSockFd, myAddrInfo->ai_addr, myAddrInfo->ai_addrlen) == -1){
-    std::cerr << "ERROR: bind()" << std::endl;
-    exit(1);
-  }
-  while (1){
-    char buf[1024]; //extra space to be safe
-    struct sockaddr addr;
-    socklen_t addr_len = sizeof(struct sockaddr);
-    
-    ssize_t length = recvfrom(serverSockFd, buf, 1024, 0, &addr, &addr_len);
+	//check arguments
+	if(argc != 2){
+		std::cerr <<"ERROR: Usage: "<< argv[0] << " <PORT> "<< std::endl;
+		exit(1);
+	}
+	char* p;
+	long portNumber = strtol(argv[1], &p, 10);
+	if (*p) {
+		std::cerr <<"ERROR: Incorrect port number: "<< argv[1] << std::endl;
+		exit(1);
+	}
+	else {
+		if (portNumber < 0 || portNumber > 65536){
+			std::cerr <<"ERROR: Incorrect port number: "<< argv[1] << std::endl;
+			exit(1);
+		}
+	}
+	
+	//UDP socket
+	int serverSockFd = socket(AF_INET, SOCK_DGRAM, 0);
+	struct addrinfo hints;
+	memset(&hints, '\0', sizeof(hints));
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_DGRAM;
+	hints.ai_flags = AI_PASSIVE;
+	struct addrinfo* myAddrInfo;
+	int ret;
+	if ((ret = getaddrinfo(NULL, argv[1], &hints, &myAddrInfo)) != 0){
+		std::cerr << "ERROR: getaddrinfo()" << std::endl;
+		exit(1);
+	}
+	if (bind(serverSockFd, myAddrInfo->ai_addr, myAddrInfo->ai_addrlen) == -1){
+		std::cerr << "ERROR: bind()" << std::endl;
+		exit(1);
+	}
+	while (1){
+		char buf[1024]; //extra space to be safe
+		struct sockaddr addr;
+		socklen_t addr_len = sizeof(struct sockaddr);
+		
+		ssize_t length = recvfrom(serverSockFd, buf, 1024, 0, &addr, &addr_len);
 
-    std::cerr << "DATA reveived " << length << " bytes from : "<< 
-      inet_ntoa(((struct sockaddr_in*)&addr)->sin_addr) << std::endl;
-    
-    length = sendto(serverSockFd, "ACK", strlen("ACK"), MSG_CONFIRM, &addr, 
-      addr_len);
-    std::cout << length << " bytes ACK sent" << std::endl; 
-  }
-  exit(0);
+		std::cerr << "DATA reveived " << length << " bytes from : "<< 
+		inet_ntoa(((struct sockaddr_in*)&addr)->sin_addr) << std::endl;
+		
+		length = sendto(serverSockFd, "ACK", strlen("ACK"), MSG_CONFIRM, &addr, 
+		addr_len);
+		std::cout << length << " bytes ACK sent" << std::endl; 
+	}
+	exit(0);
 }
