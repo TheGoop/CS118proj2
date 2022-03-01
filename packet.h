@@ -52,4 +52,4 @@ class Packet {
         int m_size;
 };
 
-#endif /* SIMPLETCP_H */
+#endif 
