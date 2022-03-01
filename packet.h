@@ -16,7 +16,7 @@ struct Header {
     uint32_t seq_no;
     uint32_t ack_no;
     uint16_t conn_id;
-    uint16_t flags; // 0000 | 0000 | 0000 | 0ASF
+    uint16_t flags; // 0000 0000 0000 0ASF
 };
 
 class Packet {
