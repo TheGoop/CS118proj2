@@ -17,7 +17,8 @@ void endProgram();
 void makeConnection();
 void makeSocket();
 void signalHandler(int signum);
-void processHeader(unsigned char*);
+void processHeader(const char*);
+void createHeader(char* head, uint32_t seq, uint32_t ack);
 
 //pointer to our file writers for each connection
 std::vector<std::ofstream*> connections;
@@ -45,12 +46,11 @@ struct sockaddr_in servaddr;
 
 int main(int argc, char** argv)
 {
-    unsigned char test[] = {
+    /*unsigned char test[] = {
         0x00, 0x00, 0x08, 0x52,
         0x00, 0x00, 0x15, 0x32,
         0x10, 0x01, 0x00, 0x02};
-    processHeader(test);
-    /*char buf[buffSize];
+    processHeader(test);*/
     if (argc != 3)
     {
         runError(1);
@@ -72,26 +72,32 @@ int main(int argc, char** argv)
     
     makeSocket();
 
-    makeConnection();
-
     signal(SIGQUIT, signalHandler);
     while (1) {
-        char buf[1024];
-        memset(buf, '\0', 1024);
+        char buf[524];
+        memset(buf, '\0', 524);
         struct sockaddr addr;
         socklen_t addr_len = sizeof(struct sockaddr);
 
-        ssize_t length = recvfrom(sock, buf, 1024, 0, &addr, &addr_len);
+        ssize_t length = recvfrom(sock, buf, 524, 0, &addr, &addr_len);
         std::cerr << "DATA reveived " << length << " bytes from : " << inet_ntoa(((struct sockaddr_in*) & addr)->sin_addr) << std::endl;
-        (*connections[0]).write(buf, 1024);
 
         processHeader(buf);
 
-        length = sendto(sock, "ACK", strlen("ACK"), MSG_CONFIRM, &addr, addr_len);
+        if (flags[1] == 1)
+        {
+            makeConnection();
+            (*connections[0]).write((const char*)buf, 524);
+        }
+
+        char head[12];
+        createHeader(head, 4321, 1);
+        processHeader(head);
+        length = sendto(sock, head, 12, MSG_CONFIRM, &addr, addr_len);
         std::cout << length << " bytes ACK sent" << std::endl;
     }
 
-    endProgram();*/
+    endProgram();
     return 0;
 }
 
@@ -101,12 +107,28 @@ void signalHandler(int signum)
     exit(0);
 }
 
+void createHeader(char* head, uint32_t seq, uint32_t ack)
+{
+    head[0] = (seq >> 24) & 0Xff;
+    head[1] = (seq >> 16) & 0Xff;
+    head[2] = (seq >> 8) & 0Xff;
+    head[3] = (seq >> 0) & 0Xff;
+    head[4] = (ack >> 24);
+    head[5] = (ack >> 16);
+    head[6] = (ack >> 8);
+    head[7] = (ack >> 0);
+    head[8] = 0x00;
+    head[9] = 0x01;
+    head[10] = 0x00;
+    head[11] = 0x06;
+}
+
 //0-3 chars are seq number
 //4-7 chars are ack number
 //8-9 chars are connection ID
 //10 is unused
 //last 3 bits of 11 are ack, syn, and fin
-void processHeader(unsigned char *buf)
+void processHeader(const char *buf)
 {
     currSeq = (buf[0] << 24 | buf[1] << 16 | buf[2] << 8 | buf[3]);
 

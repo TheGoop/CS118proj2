@@ -15,6 +15,31 @@
 #include <sys/stat.h>
 #include <time.h>
 
+//ints for handling headers
+uint32_t currSeq;
+uint32_t currAck;
+uint16_t currID;
+//0 is ack, 1 is syn, 2 is fin
+bool flags[3];
+
+void processHeader(const char* buf)
+{
+    currSeq = (buf[0] << 24 | buf[1] << 16 | buf[2] << 8 | buf[3]);
+
+    currAck = (buf[4] << 24 | buf[5] << 16 | buf[6] << 8 | buf[7]);
+
+    currID = (buf[8] << 8 | buf[9]);
+
+    flags[0] = (buf[11] >> 2) & 1;
+    flags[1] = (buf[11] >> 1) & 1;
+    flags[2] = (buf[11] >> 0) & 1;
+
+    std::cerr << currSeq << std::endl;
+    std::cerr << currAck << std::endl;
+    std::cerr << currID << std::endl;
+    std::cerr << flags[0] << flags[1] << flags[2] << std::endl;
+}
+
 int main(int argc, char** argv) {
     // check if received three command arguments
     if (argc != 4) {
@@ -40,7 +65,7 @@ int main(int argc, char** argv) {
 
     sockaddr* serverSockAddr = result->ai_addr;
     socklen_t serverSockAddrLength = result->ai_addrlen;
-    // create a UDP socket
+    // create a UDP socket1
     int serverSockFd = socket(AF_INET, SOCK_DGRAM, 0);
     // open file to transfer from client to server
     // argv[3]: FILENAME
@@ -51,20 +76,26 @@ int main(int argc, char** argv) {
     }
     struct stat fdStat;
     fstat(fileToTransferFd, &fdStat);
-    uint8_t fileBuffer[fdStat.st_size];
-    size_t bytesRead = read(fileToTransferFd, fileBuffer, fdStat.st_size);
+    uint8_t fileBuffer[12];
+    size_t bytesRead = read(fileToTransferFd, fileBuffer, 12);
     std::cout << bytesRead << " bytes read" << std::endl;
 
-    sendto(serverSockFd, fileBuffer, bytesRead, MSG_CONFIRM, serverSockAddr,
+    const char test[] = {
+        0x00, 0x00, 0x30, 0x39,
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x02};
+
+    sendto(serverSockFd, test, 12, MSG_CONFIRM, serverSockAddr,
         serverSockAddrLength);
 
     std::cout << "DATA sent" << std::endl;
     struct sockaddr addr;
     socklen_t addr_len = sizeof(struct sockaddr);
     memset(fileBuffer, 0, sizeof(fileBuffer));
-    ssize_t length = recvfrom(serverSockFd, fileBuffer, fdStat.st_size, 0, &addr,
+    ssize_t length = recvfrom(serverSockFd, fileBuffer, 12, 0, &addr,
         &addr_len);
 
+    processHeader((char*)fileBuffer);
     std::string str((char*)fileBuffer);
     std::cerr << "ACK reveived " << length << " bytes: " << std::endl
         << str << std::endl;
