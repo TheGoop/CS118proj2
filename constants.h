@@ -14,4 +14,10 @@ const int INITIAL_SSTHRESH = 10000;
 const uint32_t INITIAL_SERVER_SEQ = 4321;
 const uint32_t INITIAL_CLIENT_SEQ = 12345;
 
+const uint8_t ACK = 0x4;
+const uint8_t SYN = 0x2;
+const uint8_t FIN = 0x1;
+const uint8_t SYN_ACK = 0x06;
+const uint8_t FIN_ACK = 0x05;
+
 #endif

@@ -132,7 +132,7 @@ void signalHandler(int signum)
     exit(0);
 }
 
-void createHeader(unsigned char *head, uint32_t seq, uint32_t ack, uint16_t conn_id, int *flags)
+void createHeader(unsigned char *head, uint32_t seq, uint32_t ack, uint16_t conn_id, int flag)
 { // seq = 5, ack = 9
     head[0] = (seq >> 24) & 0Xff;
     head[1] = (seq >> 16) & 0Xff;

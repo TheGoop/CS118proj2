@@ -25,10 +25,12 @@ Client: "RECV" <Sequence Number> <Acknowledgement Number> <Connection ID> <CWND>
 #include <time.h>
 
 #include "constants.h"
-#include "packet.h"
-#include "utils.h"
 
 using namespace std;
+
+uint32_t seq_no;
+uint32_t ack_no;
+uint16_t connection_id;
 
 void createHeader(char* head, uint32_t seq, uint32_t ack, uint16_t conn_id, int flag){
     head[0] = (seq >> 24) & 0Xff;
@@ -58,7 +60,11 @@ void handshake(int sockfd, struct sockaddr* addr, socklen_t addr_len){
 	int length = sendto(sockfd, syn_buf, HEADER_SIZE, MSG_CONFIRM, addr, addr_len);
 
 	cerr << "Total bytes sent: " << length << endl;
-	// wait for syn-ack
+	cout << "SEND " << INITIAL_CLIENT_SEQ << " 0 0 " << INITIAL_CWND << " " << INITIAL_SSTHRESH << " SYN" << endl;
+
+	// receive syn-ack
+	memset(syn_buf, 0, HEADER_SIZE);
+	length = recvfrom(sockfd, syn_buf, HEADER_SIZE, 0, addr, &addr_len);
 	// send ack
 
 
