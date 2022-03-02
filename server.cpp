@@ -119,6 +119,7 @@ int main(int argc, char **argv)
 
             std::cout << length << " bytes sent" << std::endl;
         }
+        memset(flags, '\0', NUM_FLAGS);
 
         // unsigned char head[HEADER_SIZE];
         // createHeader(head, INITIAL_SERVER_SEQ, currSeq + 1, currID, SYN_ACK);
