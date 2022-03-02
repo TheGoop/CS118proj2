@@ -1,4 +1,4 @@
-/* 
+/*
 Starter code from Tianyuan Yu's Week 7 slides
 */
 
@@ -25,6 +25,7 @@ Server: "SEND" <Sequence Number> <Acknowledgement Number> <Connection ID> ["ACK"
 #define INITIAL_SEQ_NUM 4321
 #define PAYLOAD_SIZE 512
 #define HEADER_SIZE 12
+uint8_t SYN_ACK = 0x06;
 
 void runError(int code);
 void endProgram();
@@ -32,7 +33,7 @@ void makeConnection(std::string direc);
 void makeSocket(char *port);
 void signalHandler(int signum);
 void processHeader(const char *buf, uint32_t &currSeq, uint32_t &currAck, uint16_t &currID, bool *flags);
-void createHeader(unsigned char *head, uint32_t seq, uint32_t ack, uint16_t conn_id, int *flags);
+void createHeader(unsigned char *head, uint32_t seq, uint32_t ack, uint16_t conn_id, uint8_t flag_byte);
 
 // pointer to our file writers for each connection
 std::vector<std::ofstream *> connections;
@@ -110,16 +111,20 @@ int main(int argc, char **argv)
         {
             makeConnection(direc);
             unsigned char msg[HEADER_SIZE] = "";
-            createHeader(msg, INITIAL_SEQ_NUM, currSeq + 1, connections[0], );
+            // createHeader(msg, INITIAL_SEQ_NUM, currSeq + 1, connections[0], SYN_ACK);
+            createHeader(msg, INITIAL_SEQ_NUM, currSeq + 1, currID, SYN_ACK);
             // write back to the client
-            (*connections[connections.size() - 1]).write((const char *)buf, PACKET_SIZE);
+            // (*connections[connections.size() - 1]).write((const char *)buf, PACKET_SIZE);
+
+            length = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
+            std::cout << length << " bytes ACK sent" << std::endl;
         }
 
-        unsigned char head[HEADER_SIZE];
-        createHeader(head, INITIAL_SEQ_NUM, 1);
-        processHeader(buf, currSeq, currAck, currID, flags);
-        length = sendto(sock, head, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
-        std::cout << length << " bytes ACK sent" << std::endl;
+        // unsigned char head[HEADER_SIZE];
+        // createHeader(head, INITIAL_SEQ_NUM, currSeq + 1, currID, SYN_ACK);
+        // processHeader(buf, currSeq, currAck, currID, flags);
+        // length = sendto(sock, head, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
+        // std::cout << length << " bytes ACK sent" << std::endl;
     }
 
     endProgram();
@@ -132,7 +137,7 @@ void signalHandler(int signum)
     exit(0);
 }
 
-void createHeader(unsigned char *head, uint32_t seq, uint32_t ack, uint16_t conn_id, int *flags)
+void createHeader(unsigned char *head, uint32_t seq, uint32_t ack, uint16_t conn_id, uint8_t flag_byte)
 { // seq = 5, ack = 9
     head[0] = (seq >> 24) & 0Xff;
     head[1] = (seq >> 16) & 0Xff;
@@ -142,15 +147,9 @@ void createHeader(unsigned char *head, uint32_t seq, uint32_t ack, uint16_t conn
     head[5] = (ack >> 16);
     head[6] = (ack >> 8);
     head[7] = (ack >> 0);
-    head[8] = 0x00;
-	if (conn_id == 1){
-		head[9] = 0x01;
-	}
-	else head[9] = 0x00;
+    head[8] = conn_id;
     head[10] = 0x00;
-	if (flag == 1){
-		head[11] = 0x02;
-	}
+    head[11] = flag_byte;
 }
 
 // 0-3 chars are seq number
