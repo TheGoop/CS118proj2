@@ -3,3 +3,5 @@
 .vagrant
 server
 client
+fake.txt
+test/
