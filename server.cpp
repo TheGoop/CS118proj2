@@ -45,9 +45,9 @@ int main(int argc, char **argv)
     std::string direc;
 
     // ints for handling headers
-    uint32_t currSeq;
-    uint32_t currAck;
-    uint16_t currID;
+    uint32_t currSeq = INITIAL_SERVER_SEQ;
+    uint32_t currAck = 0;
+    uint16_t currID = 0;
 
     // index 0 is ack, 1 is syn, 2 is fin
     bool flags[3];
@@ -81,8 +81,7 @@ int main(int argc, char **argv)
     }
 
     direc = argv[2];
-    std::cerr << argv[1] << std::endl
-              << argv[2] << std::endl;
+    std::cerr << argv[1] << std::endl << argv[2] << std::endl;
 
     makeSocket(port);
 
@@ -100,11 +99,7 @@ int main(int argc, char **argv)
         std::cerr << "DATA received " << length << " bytes from: " << inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr) << std::endl;
 
         processHeader(buf, currSeq, currAck, currID, flags);
-        std::cout <<  "RECV " <<  currSeq << " " << currAck << " " << currID;
-        if (flags[0]) std::cout << " ACK";
-        if (flags[1]) std::cout << " SYN";
-        if (flags[2]) std::cout << " FIN";
-        std::cout << std::endl;
+        printServerMessage("RECV", currSeq, currAck, currID, flags);
 
         // if this is a SYN packet from client
         if (flags[1])
@@ -120,11 +115,7 @@ int main(int argc, char **argv)
             // (*connections[connections.size() - 1]).write((const char *)buf, MAX_SIZE);
 
             length = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
-            std::cout <<  "SEND " <<  currSeq << " " << currAck << " " << currID;
-            if (flags[0]) std::cout << " ACK";
-            if (flags[1]) std::cout << " SYN";
-            if (flags[2]) std::cout << " FIN";
-            std::cout << std::endl;
+            printServerMessage("SEND", currSeq, currAck, currID, flags);
 
             std::cout << length << " bytes sent" << std::endl;
         }
@@ -174,7 +165,7 @@ void makeSocket(char *port)
 // should always be run before any exits
 void endProgram()
 {
-    for (int x = 0; x < connections.size(); x++)
+    for (size_t x = 0; x < connections.size(); x++)
     {
         (*connections[x]).close();
     }

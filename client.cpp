@@ -43,11 +43,7 @@ void handshake(int sockfd, struct sockaddr* addr, socklen_t addr_len){
 	int length = sendto(sockfd, syn_buf, HEADER_SIZE, MSG_CONFIRM, addr, addr_len);
 
 	cerr << "Total bytes sent: " << length << endl;
-	cout << "SEND " << seq_no << " " << ack_no << " " << connection_id << " " << INITIAL_CWND << " " << INITIAL_SSTHRESH;
-	if (flags[0]) std::cout << " ACK";
-	if (flags[1]) std::cout << " SYN";
-	if (flags[2]) std::cout << " FIN";
-	std::cout << std::endl;
+	printClientMessage("SEND", seq_no, ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
 
 	// receive syn-ack
 	unsigned char buf[HEADER_SIZE];
@@ -58,12 +54,7 @@ void handshake(int sockfd, struct sockaddr* addr, socklen_t addr_len){
 	processHeader(buf, seq_no, ack_no, connection_id, flags);
 
 	cerr << "Total bytes received: " << length << endl;
-	cout << "RECV " << seq_no << " " << ack_no << " " << connection_id << " " << 
-		INITIAL_CWND << " " << INITIAL_SSTHRESH;
-	if (flags[0]) std::cout << " ACK";
-	if (flags[1]) std::cout << " SYN";
-	if (flags[2]) std::cout << " FIN";
-	std::cout << std::endl;
+	printClientMessage("RECV", seq_no, ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
 
 	// send ack
 

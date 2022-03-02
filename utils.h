@@ -59,4 +59,20 @@ void processHeader(unsigned char *buf, uint32_t &currSeq, uint32_t &currAck, uin
     std::cerr << "ASF: " << flags[0] << flags[1] << flags[2] << std::endl;
 }
 
+void printServerMessage(std::string msg, u_int32_t currSeq, u_int32_t currAck, u_int16_t connID, bool *flags){
+    std::cout << msg << " " <<  currSeq << " " << currAck << " " << connID;
+    if (flags[0]) std::cout << " ACK";
+    if (flags[1]) std::cout << " SYN";
+    if (flags[2]) std::cout << " FIN";
+    std::cout << std::endl;
+}
+
+void printClientMessage(std::string msg, u_int32_t currSeq, u_int32_t currAck, u_int16_t connID, int cwnd, int ssthresh, bool *flags){
+    std::cout << msg << " " <<  currSeq << " " << currAck << " " << connID << " " << cwnd << " " << ssthresh;
+	if (flags[0]) std::cout << " ACK";
+	if (flags[1]) std::cout << " SYN";
+	if (flags[2]) std::cout << " FIN";
+	std::cout << std::endl;
+}
+
 #endif
