@@ -10,7 +10,7 @@ all: server client
 
 server: $(CLASSES)
 	$(CXX) -o $@ $^ $(CXXFLAGS) $@.cpp
-	$(CXX) -o dumClient $^ $(CXXFLAGS) dummyclient.cpp
+	# $(CXX) -o dumClient $^ $(CXXFLAGS) dummyclient.cpp
 
 client: $(CLASSES)
 	$(CXX) -o $@ $^ $(CXXFLAGS) $@.cpp

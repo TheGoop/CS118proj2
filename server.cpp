@@ -21,19 +21,14 @@ Server: "SEND" <Sequence Number> <Acknowledgement Number> <Connection ID> ["ACK"
 #include <csignal>
 #include <math.h>
 
-#define PACKET_SIZE 524
-#define INITIAL_SEQ_NUM 4321
-#define PAYLOAD_SIZE 512
-#define HEADER_SIZE 12
-uint8_t SYN_ACK = 0x06;
+#include "utils.h"
+#include "constants.h"
 
 void runError(int code);
 void endProgram();
 void makeConnection(std::string direc);
 void makeSocket(char *port);
 void signalHandler(int signum);
-void processHeader(const char *buf, uint32_t &currSeq, uint32_t &currAck, uint16_t &currID, bool *flags);
-void createHeader(unsigned char *head, uint32_t seq, uint32_t ack, uint16_t conn_id, uint8_t flag_byte);
 
 // pointer to our file writers for each connection
 std::vector<std::ofstream *> connections;
@@ -95,33 +90,47 @@ int main(int argc, char **argv)
 
     while (1)
     {
-        char buf[PACKET_SIZE];
-        memset(buf, '\0', PACKET_SIZE);
+        unsigned char buf[MAX_SIZE];
+        memset(buf, '\0', MAX_SIZE);
         struct sockaddr addr;
         socklen_t addr_len = sizeof(struct sockaddr);
 
         // recieve packet from Client
-        ssize_t length = recvfrom(sock, buf, PACKET_SIZE, 0, &addr, &addr_len);
-        std::cerr << "DATA reveived " << length << " bytes from : " << inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr) << std::endl;
+        ssize_t length = recvfrom(sock, buf, MAX_SIZE, 0, &addr, &addr_len);
+        std::cerr << "DATA received " << length << " bytes from: " << inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr) << std::endl;
 
         processHeader(buf, currSeq, currAck, currID, flags);
+        std::cout <<  "RECV " <<  currSeq << " " << currAck << " " << currID;
+        if (flags[0]) std::cout << " ACK";
+        if (flags[1]) std::cout << " SYN";
+        if (flags[2]) std::cout << " FIN";
+        std::cout << std::endl;
 
         // if this is a SYN packet from client
-        if (flags[1] == 1)
+        if (flags[1])
         {
             makeConnection(direc);
             unsigned char msg[HEADER_SIZE] = "";
-            // createHeader(msg, INITIAL_SEQ_NUM, currSeq + 1, connections[0], SYN_ACK);
-            createHeader(msg, INITIAL_SEQ_NUM, currSeq + 1, currID, SYN_ACK);
+            // createHeader(msg, INITIAL_SERVER_SEQ, currSeq + 1, connections[0], SYN_ACK);
+            currAck = currSeq + 1;
+            currSeq = INITIAL_SERVER_SEQ;
+            currID++;
+            createHeader(msg, currSeq, currAck, currID, SYN_ACK, flags);
             // write back to the client
-            // (*connections[connections.size() - 1]).write((const char *)buf, PACKET_SIZE);
+            // (*connections[connections.size() - 1]).write((const char *)buf, MAX_SIZE);
 
             length = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
-            std::cout << length << " bytes ACK sent" << std::endl;
+            std::cout <<  "SEND " <<  currSeq << " " << currAck << " " << currID;
+            if (flags[0]) std::cout << " ACK";
+            if (flags[1]) std::cout << " SYN";
+            if (flags[2]) std::cout << " FIN";
+            std::cout << std::endl;
+
+            std::cout << length << " bytes sent" << std::endl;
         }
 
         // unsigned char head[HEADER_SIZE];
-        // createHeader(head, INITIAL_SEQ_NUM, currSeq + 1, currID, SYN_ACK);
+        // createHeader(head, INITIAL_SERVER_SEQ, currSeq + 1, currID, SYN_ACK);
         // processHeader(buf, currSeq, currAck, currID, flags);
         // length = sendto(sock, head, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
         // std::cout << length << " bytes ACK sent" << std::endl;
@@ -135,45 +144,6 @@ void signalHandler(int signum)
 {
     endProgram();
     exit(0);
-}
-
-void createHeader(unsigned char *head, uint32_t seq, uint32_t ack, uint16_t conn_id, uint8_t flag_byte)
-{ // seq = 5, ack = 9
-    head[0] = (seq >> 24) & 0Xff;
-    head[1] = (seq >> 16) & 0Xff;
-    head[2] = (seq >> 8) & 0Xff;
-    head[3] = (seq >> 0) & 0Xff;
-    head[4] = (ack >> 24);
-    head[5] = (ack >> 16);
-    head[6] = (ack >> 8);
-    head[7] = (ack >> 0);
-    head[8] = conn_id;
-    head[10] = 0x00;
-    head[11] = flag_byte;
-}
-
-// 0-3 chars are seq number
-// 4-7 chars are ack number
-// 8-9 chars are connection ID
-// 10 is unused
-// last 3 bits of 11 are ack, syn, and fin
-
-void processHeader(const char *buf, uint32_t &currSeq, uint32_t &currAck, uint16_t &currID, bool *flags)
-{
-    currSeq = (buf[0] << 24 | buf[1] << 16 | buf[2] << 8 | buf[3]);
-
-    currAck = (buf[4] << 24 | buf[5] << 16 | buf[6] << 8 | buf[7]);
-
-    currID = (buf[8] << 8 | buf[9]);
-
-    flags[0] = (buf[11] >> 2) & 1;
-    flags[1] = (buf[11] >> 1) & 1;
-    flags[2] = (buf[11] >> 0) & 1;
-
-    std::cerr << currSeq << std::endl;
-    std::cerr << currAck << std::endl;
-    std::cerr << currID << std::endl;
-    std::cerr << flags[0] << flags[1] << flags[2] << std::endl;
 }
 
 void makeSocket(char *port)

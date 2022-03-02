@@ -25,46 +25,46 @@ Client: "RECV" <Sequence Number> <Acknowledgement Number> <Connection ID> <CWND>
 #include <time.h>
 
 #include "constants.h"
+#include "utils.h"
 
 using namespace std;
 
-uint32_t seq_no;
-uint32_t ack_no;
-uint16_t connection_id;
-
-void createHeader(char* head, uint32_t seq, uint32_t ack, uint16_t conn_id, int flag){
-    head[0] = (seq >> 24) & 0Xff;
-    head[1] = (seq >> 16) & 0Xff;
-    head[2] = (seq >> 8) & 0Xff;
-    head[3] = (seq >> 0) & 0Xff;
-    head[4] = (ack >> 24);
-    head[5] = (ack >> 16);
-    head[6] = (ack >> 8);
-    head[7] = (ack >> 0);
-    head[8] = 0x00;
-	if (conn_id == 1){
-		head[9] = 0x01;
-	}
-	else head[9] = 0x00;
-    head[10] = 0x00;
-	if (flag == 1){
-		head[11] = 0x02;
-	}
-}
-
 void handshake(int sockfd, struct sockaddr* addr, socklen_t addr_len){
 	// send syn
-	char syn_buf[HEADER_SIZE];
-	createHeader(syn_buf, INITIAL_CLIENT_SEQ, 0, 0, 1);
+	uint32_t seq_no = INITIAL_CLIENT_SEQ;
+	uint32_t ack_no = 0;
+	uint16_t connection_id = 0;
+	bool flags[3];	// ASF
+	memset(flags, '\0', 3);
+
+	unsigned char syn_buf[HEADER_SIZE];
+	createHeader(syn_buf, seq_no, ack_no, connection_id, SYN, flags);
 
 	int length = sendto(sockfd, syn_buf, HEADER_SIZE, MSG_CONFIRM, addr, addr_len);
 
 	cerr << "Total bytes sent: " << length << endl;
-	cout << "SEND " << INITIAL_CLIENT_SEQ << " 0 0 " << INITIAL_CWND << " " << INITIAL_SSTHRESH << " SYN" << endl;
+	cout << "SEND " << seq_no << " " << ack_no << " " << connection_id << " " << INITIAL_CWND << " " << INITIAL_SSTHRESH;
+	if (flags[0]) std::cout << " ACK";
+	if (flags[1]) std::cout << " SYN";
+	if (flags[2]) std::cout << " FIN";
+	std::cout << std::endl;
 
 	// receive syn-ack
-	memset(syn_buf, 0, HEADER_SIZE);
-	length = recvfrom(sockfd, syn_buf, HEADER_SIZE, 0, addr, &addr_len);
+	unsigned char buf[HEADER_SIZE];
+	memset(flags, '\0', 3);
+
+	length = recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
+	
+	processHeader(buf, seq_no, ack_no, connection_id, flags);
+
+	cerr << "Total bytes received: " << length << endl;
+	cout << "RECV " << seq_no << " " << ack_no << " " << connection_id << " " << 
+		INITIAL_CWND << " " << INITIAL_SSTHRESH;
+	if (flags[0]) std::cout << " ACK";
+	if (flags[1]) std::cout << " SYN";
+	if (flags[2]) std::cout << " FIN";
+	std::cout << std::endl;
+
 	// send ack
 
 
