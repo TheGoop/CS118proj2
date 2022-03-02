@@ -1,17 +1,17 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
-#define MAX_PAYLOAD 512
-#define HEADER_SIZE 12
-#define MAX_SIZE 524
-#define MAX_SEQ_NO 102400
-#define RETRANS_TIMEOUT 0.5 
-#define INITIAL_CWND 512
-#define MAX_CWND 51200
-#define RWND 51200              // RWND NEVER CHANGES
-#define INITIAL_SSTHRESH 10000
+const int MAX_PAYLOAD = 512;
+const int HEADER_SIZE = 12;
+const int MAX_SIZE = 524;
+const int MAX_SEQ_NO = 102400;
+const int RETRANS_TIMEOUT = 0.5;
+const int INITIAL_CWND = 512;
+const int MAX_CWND = 51200;
+const int RWND = 51200;
+const int INITIAL_SSTHRESH = 10000;
 
-#define INITIAL_SERVER_SEQ 4321
-#define INITIAL_CLIENT_SEQ 12345
+const uint32_t INITIAL_SERVER_SEQ = 4321;
+const uint32_t INITIAL_CLIENT_SEQ = 12345;
 
 #endif
