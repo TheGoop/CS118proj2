@@ -81,7 +81,8 @@ int main(int argc, char **argv)
     }
 
     direc = argv[2];
-    std::cerr << argv[1] << std::endl << argv[2] << std::endl;
+    std::cerr << argv[1] << std::endl
+              << argv[2] << std::endl;
 
     makeSocket(port);
 
@@ -101,21 +102,20 @@ int main(int argc, char **argv)
         processHeader(buf, currSeq, currAck, currID, flags);
         printServerMessage("RECV", currSeq, currAck, currID, flags);
 
-        // if this is a SYN packet from client
+        // if this is a SYN packet from client (Aka new client/new connection)
         if (flags[1])
         {
+            // Allocate a file writer for this new client
             makeConnection(direc);
             unsigned char msg[HEADER_SIZE] = "";
-            // createHeader(msg, INITIAL_SERVER_SEQ, currSeq + 1, connections[0], SYN_ACK);
             currAck = currSeq + 1;
             currSeq = INITIAL_SERVER_SEQ;
             currID++;
             createHeader(msg, currSeq, currAck, currID, SYN_ACK, flags);
-            // write back to the client
-            // (*connections[connections.size() - 1]).write((const char *)buf, MAX_SIZE);
 
             length = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
             printServerMessage("SEND", currSeq, currAck, currID, flags);
+            printf("CurrID: %d\n", currID);
 
             std::cout << length << " bytes sent" << std::endl;
         }
@@ -173,9 +173,12 @@ void endProgram()
     close(sock);
 }
 
-// run this everytime we make a connection to a client
-// This works with a premade directory and a given direc with no leading /
-// I dont know how its going to be tested, may need to be changed
+/*
+    connections is mapped this way
+    connections[i] contains the File Writer for the (i-1)th client
+    first client's file writer -> connections[0]
+    second client's file writer -> connections[1]
+*/
 void makeConnection(std::string direc)
 {
     connections.push_back(new std::ofstream(direc + "/" +
