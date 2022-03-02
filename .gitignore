@@ -3,5 +3,7 @@
 .vagrant
 server
 client
-fake.txt
-test/
+.vscode
+file.txt
+received.data
+retrans_client.cpp

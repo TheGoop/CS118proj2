@@ -4,6 +4,8 @@ CXXFLAGS= -g -Wall -pthread -std=c++11 $(CXXOPTIMIZE)
 USERID=123456789
 CLASSES=
 
+default: clean server client
+
 all: server client
 
 server: $(CLASSES)
@@ -14,7 +16,7 @@ client: $(CLASSES)
 	$(CXX) -o $@ $^ $(CXXFLAGS) $@.cpp
 
 clean:
-	rm -rf *.o *~ *.gch *.swp *.dSYM server client *.tar.gz
+	rm -rf *.o *~ *.gch *.swp *.dSYM server client *.tar.gz *.data
 
 dist: tarball
 tarball: clean
