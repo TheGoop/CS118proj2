@@ -31,33 +31,46 @@ using namespace std;
 
 void handshake(int sockfd, struct sockaddr* addr, socklen_t addr_len){
 	// send syn
-	uint32_t seq_no = INITIAL_CLIENT_SEQ;
-	uint32_t ack_no = 0;
+	uint32_t server_seq_no = INITIAL_SERVER_SEQ;
+	uint32_t server_ack_no = 0;
 	uint16_t connection_id = 0;
-	bool flags[3];	// ASF
-	memset(flags, '\0', 3);
 
-	unsigned char syn_buf[HEADER_SIZE];
-	createHeader(syn_buf, seq_no, ack_no, connection_id, SYN, flags);
+	uint32_t client_seq_no = INITIAL_CLIENT_SEQ;
+	uint32_t client_ack_no = 0;
 
-	int length = sendto(sockfd, syn_buf, HEADER_SIZE, MSG_CONFIRM, addr, addr_len);
+	bool flags[NUM_FLAGS];	// ASF
+	memset(flags, '\0', NUM_FLAGS);
+
+	unsigned char buf[HEADER_SIZE];
+	createHeader(buf, client_seq_no, client_ack_no, connection_id, SYN, flags);
+
+	int length = sendto(sockfd, buf, HEADER_SIZE, MSG_CONFIRM, addr, addr_len);
 
 	cerr << "Total bytes sent: " << length << endl;
-	printClientMessage("SEND", seq_no, ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
+	printClientMessage("SEND", client_seq_no, client_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
 
 	// receive syn-ack
-	unsigned char buf[HEADER_SIZE];
-	memset(flags, '\0', 3);
+	memset(buf, '\0', HEADER_SIZE);	
+	memset(flags, '\0', NUM_FLAGS);
 
 	length = recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 	
-	processHeader(buf, seq_no, ack_no, connection_id, flags);
+	processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
 
 	cerr << "Total bytes received: " << length << endl;
-	printClientMessage("RECV", seq_no, ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
+	printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
 
 	// send ack
+	memset(buf, '\0', HEADER_SIZE);	
+	memset(flags, '\0', NUM_FLAGS);
 
+	client_seq_no = server_ack_no;
+	client_ack_no = server_seq_no + 1;
+	createHeader(buf, client_seq_no, client_ack_no, connection_id, ACK, flags);
+	length = sendto(sockfd, buf, HEADER_SIZE, MSG_CONFIRM, addr, addr_len);
+
+	cerr << "Total bytes sent: " << length << endl;
+	printClientMessage("SEND", client_seq_no, client_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
 
 }
 

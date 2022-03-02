@@ -19,5 +19,6 @@ const uint8_t SYN = 0x2;
 const uint8_t FIN = 0x1;
 const uint8_t SYN_ACK = 0x06;
 const uint8_t FIN_ACK = 0x05;
+const int NUM_FLAGS = 3;
 
 #endif
