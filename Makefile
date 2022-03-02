@@ -10,6 +10,7 @@ all: server client
 
 server: $(CLASSES)
 	$(CXX) -o $@ $^ $(CXXFLAGS) $@.cpp
+	$(CXX) -o dumClient $^ $(CXXFLAGS) dummyclient.cpp
 
 client: $(CLASSES)
 	$(CXX) -o $@ $^ $(CXXFLAGS) $@.cpp
@@ -20,6 +21,7 @@ clean:
 dist: tarball
 tarball: clean
 	tar -cvzf /tmp/$(USERID).tar.gz --exclude=./.vagrant . && mv /tmp/$(USERID).tar.gz .
+<<<<<<< HEAD
 
 good: goodserver goodclient
 
@@ -28,3 +30,6 @@ goodserver:
 
 goodclient: 
 	gcc -o client good_client.c -I. 
+=======
+	
+>>>>>>> cdf6ba89d5481a01040fb9b795c9a449e375425c
