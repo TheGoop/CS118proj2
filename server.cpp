@@ -48,6 +48,7 @@ int main(int argc, char **argv)
     uint32_t currSeq = INITIAL_SERVER_SEQ;
     uint32_t currAck = 0;
     uint16_t currID = 0;
+    uint16_t totalConnections = 0;
 
     // index 0 is ack, 1 is syn, 2 is fin
     bool flags[3];
@@ -103,19 +104,20 @@ int main(int argc, char **argv)
         printServerMessage("RECV", currSeq, currAck, currID, flags);
 
         // if this is a SYN packet from client (Aka new client/new connection)
-        if (flags[1])
+        if (flags[1] && !flags[0])
         {
+            printf("SYN RECIEVED\n");
             // Allocate a file writer for this new client
             makeConnection(direc);
             unsigned char msg[HEADER_SIZE] = "";
-            currAck = currSeq + 1;
+            currAck = incrementSeq(currSeq, 1);
             currSeq = INITIAL_SERVER_SEQ;
-            currID++;
+            totalConnections = incrementConnections(totalConnections, 1);
+            currID = totalConnections;
             createHeader(msg, currSeq, currAck, currID, SYN_ACK, flags);
 
             length = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
             printServerMessage("SEND", currSeq, currAck, currID, flags);
-            printf("CurrID: %d\n", currID);
 
             std::cout << length << " bytes sent" << std::endl;
         }
@@ -183,7 +185,6 @@ void makeConnection(std::string direc)
 {
     connections.push_back(new std::ofstream(direc + "/" +
                                             std::to_string(connections.size() + 1) + ".file"));
-    std::cerr << "connection made" << std::endl;
 }
 
 // simple error function
