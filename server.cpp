@@ -23,7 +23,7 @@ void makeConnection(std::string direc);
 void makeSocket(char *port);
 void signalHandler(int signum);
 void processHeader(const char *buf, uint32_t &currSeq, uint32_t &currAck, uint16_t &currID, bool *flags);
-void createHeader(char *head, uint32_t seq, uint32_t ack);
+void createHeader(unsigned char *head, uint32_t seq, uint32_t ack);
 
 // pointer to our file writers for each connection
 std::vector<std::ofstream *> connections;
@@ -100,11 +100,13 @@ int main(int argc, char **argv)
         if (flags[1] == 1)
         {
             makeConnection(direc);
+            unsigned char msg[HEADER_SIZE] = "";
+            createHeader(msg, INITIAL_SEQ_NUM, currSeq + 1);
             // write back to the client
-            (*connections[0]).write((const char *)buf, PACKET_SIZE);
+            (*connections[connections.size() - 1]).write((const char *)buf, PACKET_SIZE);
         }
 
-        char head[HEADER_SIZE];
+        unsigned char head[HEADER_SIZE];
         createHeader(head, INITIAL_SEQ_NUM, 1);
         processHeader(buf, currSeq, currAck, currID, flags);
         length = sendto(sock, head, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
@@ -121,8 +123,8 @@ void signalHandler(int signum)
     exit(0);
 }
 
-void createHeader(char *head, uint32_t seq, uint32_t ack)
-{
+void createHeader(unsigned char *head, uint32_t seq, uint32_t ack)
+{ // seq = 5, ack = 9
     head[0] = (seq >> 24) & 0Xff;
     head[1] = (seq >> 16) & 0Xff;
     head[2] = (seq >> 8) & 0Xff;
@@ -135,6 +137,10 @@ void createHeader(char *head, uint32_t seq, uint32_t ack)
     head[9] = 0x01;
     head[10] = 0x00;
     head[11] = 0x06;
+    for (int i = 0; i < 12; i++)
+    {
+        printf("%d: %u\n", i, head[i]);
+    }
 }
 
 // 0-3 chars are seq number
