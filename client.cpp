@@ -61,10 +61,8 @@ void handshake(int sockfd, struct sockaddr* addr, socklen_t addr_len){
 
 	cerr << "Total bytes received: " << length << endl;
 	printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
-
-	// ACCORDING TO THE SPEC, THE ACK NEEDS TO HAVE THE DATA PAYLOAD SO IT IS NO LONGER IN THIS FUNCTION
-	// memset(buf, '\0', HEADER_SIZE);	
-	// memset(flags, '\0', NUM_FLAGS);
+	
+	// send ack is completed after handshake
 }
 
 int main(int argc, char** argv){
@@ -109,14 +107,8 @@ int main(int argc, char** argv){
 
 	handshake(serverSockFd, serverSockAddr, serverSockAddrLength);
 
-	// char buf[524];
-	// memset(buf, '\0', 524);
-	// struct sockaddr addr;
-	// socklen_t addr_len = sizeof(struct sockaddr);
-
-	// ssize_t length = recvfrom(serverSockFd, buf, 524, 0, &addr, &addr_len);
-	// std::cerr << "DATA received " << length << " bytes from : " << inet_ntoa(((struct sockaddr_in*) & addr)->sin_addr) << std::endl;
-
+	// Finish handshake with payload in ACK sent by client
+	// TODO: THIS IS PROBABLY WHERE YOU START A WHILE LOOP SENDING SEGMENTS WITH PAYLOAD AND RECEIVING ACKs
 	client_seq_no = server_ack_no;
 	client_ack_no = server_seq_no + 1;
 
@@ -135,14 +127,28 @@ int main(int argc, char** argv){
 	size_t bytesRead = read(filefd, buf + HEADER_SIZE, fdStat.st_size);
 	cerr << bytesRead << " bytes read from file" << endl;
 
+	// TODO: TO CHECK IF ALL BYTES OF THE FILE HAVE BEEN ACK'D, MAYBE READ THE ENTIRE FILE INTO A BUFFER
+	// GET LENGTH OF FILE, THEN COMPARE LENGTH TO SERVER ACK NO
+	// ONCE LENGTH == SERVER ACK NO - INITIAL CLIENT SEQ, THEN START TEARDOWN WITH FIN
+
+	// TODO: the send process and receive process can be put in their own functions
+
 	int length = sendto(serverSockFd, buf, HEADER_SIZE + bytesRead, MSG_CONFIRM, serverSockAddr, serverSockAddrLength);
 
 	cerr << "Total bytes sent: " << length << endl;
 	printClientMessage("SEND", client_seq_no, client_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
 
+	memset(buf, '\0', HEADER_SIZE);	
+	memset(flags, '\0', NUM_FLAGS);
+
+	length = recvfrom(serverSockFd, buf, HEADER_SIZE, 0, serverSockAddr, &serverSockAddrLength);
+	
+	processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
+
+	cerr << "Total bytes received: " << length << endl;
+	printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
 
 	// sendto(serverSockFd, fileBuffer, bytesRead, MSG_CONFIRM, serverSockAddr, serverSockAddrLength);
-
 	// struct sockaddr addr;
 	// socklen_t addr_len = sizeof(struct sockaddr);
 	// memset(fileBuffer, 0, sizeof(fileBuffer));
@@ -150,7 +156,7 @@ int main(int argc, char** argv){
 
 	// string str((char*)fileBuffer);
 	// cerr << "ACK received " << length << " bytes: " << endl << str << endl;
-	// close(fileToTransferFd);
-	// exit(0);
+	close(filefd);
+	exit(0);
 }
 

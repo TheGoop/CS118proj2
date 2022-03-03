@@ -72,7 +72,6 @@ int main(int argc, char **argv)
 
     // reads port, tries to catch invalid port numbers
     // only catches port numbers that are not numbers
-    // TODO find other invalid port numbers?
     try
     {
         port = argv[1];
@@ -98,7 +97,7 @@ int main(int argc, char **argv)
         struct sockaddr addr;
         socklen_t addr_len = sizeof(struct sockaddr);
 
-        // recieve packet from Client
+        // recieve packet from client
         ssize_t length = recvfrom(sock, recieved_msg, MAX_SIZE, 0, &addr, &addr_len);
         std::cerr << "Total bytes received: " << length << std::endl;
 
@@ -134,7 +133,6 @@ int main(int argc, char **argv)
             {
                 // write to connections[currID - 1]
                 processPayload(recieved_msg, recieved_payload);
-                std::cerr << recieved_payload << std::endl;
                 *connections[currID-1] << recieved_payload;
 
                 // create ACK to send back to client
@@ -155,12 +153,6 @@ int main(int argc, char **argv)
             }
         }
         memset(flags, '\0', NUM_FLAGS);
-
-        // unsigned char head[HEADER_SIZE];
-        // createHeader(head, INITIAL_SERVER_SEQ, currSeq + 1, currID, SYN_ACK);
-        // processHeader(recieved_msg, currSeq, currAck, currID, flags);
-        // length = sendto(sock, head, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
-        // std::cout << length << " bytes ACK sent" << std::endl;
     }
 
     endProgram();
