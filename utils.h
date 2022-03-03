@@ -68,7 +68,7 @@ void processHeader(unsigned char *buf, uint32_t &currSeq, uint32_t &currAck, uin
 
 void processPayload(unsigned char *packet, unsigned char *payload)
 {
-    memcpy(payload, &packet[12], MAX_PAYLOAD_SIZE);
+    memcpy(payload, &packet[HEADER_SIZE], MAX_PAYLOAD_SIZE);
 }
 
 void printServerMessage(std::string msg, u_int32_t currSeq, u_int32_t currAck, u_int16_t connID, bool *flags)
