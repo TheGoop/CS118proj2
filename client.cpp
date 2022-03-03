@@ -106,6 +106,7 @@ int main(int argc, char** argv){
 
 	bool flags[NUM_FLAGS];	// ASF
 
+	// Also updates the seq_no, ack_no, conn_id
 	handshake(sockfd, addr, addr_len, server_seq_no, server_ack_no, connection_id, client_seq_no, client_ack_no, flags);
 
 	// Finish handshake with payload in ACK sent by client
@@ -128,12 +129,13 @@ int main(int argc, char** argv){
 	size_t bytesRead = read(filefd, buf + HEADER_SIZE, fdStat.st_size);
 	cerr << bytesRead << " bytes read from file" << endl;
 
-	// TODO: TO CHECK IF ALL BYTES OF THE FILE HAVE BEEN ACK'D, MAYBE READ THE ENTIRE FILE INTO A BUFFER
-	// GET LENGTH OF FILE, THEN COMPARE LENGTH TO SERVER ACK NO
+	// TODO: TO CHECK IF ALL BYTES OF THE FILE HAVE BEEN ACK'D, MAYBE READ THE ENTIRE FILE INTO A BUFFER,
+	// GET LENGTH OF FILE, THEN COMPARE LENGTH TO SERVER ACK NO - INITIAL CLIENT SEQ
 	// ONCE LENGTH == SERVER ACK NO - INITIAL CLIENT SEQ, THEN START TEARDOWN WITH FIN
 
 	// TODO: the send process and receive process can be put in their own functions
 
+	// 								HEADER_SIZE + payload
 	int length = sendto(sockfd, buf, HEADER_SIZE + bytesRead, MSG_CONFIRM, addr, addr_len);
 
 	cerr << "Total bytes sent: " << length << endl;
@@ -155,8 +157,6 @@ int main(int argc, char** argv){
 	// memset(fileBuffer, 0, sizeof(fileBuffer));
 	// ssize_t length = recvfrom(serverSockFd, fileBuffer, fdStat.st_size, 0, &addr, &addr_len);
 
-	// string str((char*)fileBuffer);
-	// cerr << "ACK received " << length << " bytes: " << endl << str << endl;
 	close(filefd);
 	exit(0);
 }
