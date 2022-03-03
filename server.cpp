@@ -134,6 +134,19 @@ int main(int argc, char **argv)
                 // write to connections[currID - 1]
                 processPayload(recieved_msg, recieved_payload);
                 *connections[currID - 1] << recieved_payload;
+
+                // create ACK to send back to client
+                unsigned char msg[HEADER_SIZE] = "";
+                currSeq = currAck;
+                currAck = incrementAck(currSeq, sizeof(recieved_payload));
+                flags[0] = true;
+                flags[1] = false;
+                flags[2] = false;
+                createHeader(msg, currSeq, currAck, currID, ACK, flags);
+
+                length = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
+                printServerMessage("SEND", currSeq, currAck, currID, flags);
+                std::cout << length << " bytes sent" << std::endl;
             }
             else
             {
