@@ -29,20 +29,12 @@ Client: "RECV" <Sequence Number> <Acknowledgement Number> <Connection ID> <CWND>
 
 using namespace std;
 
-uint32_t server_seq_no = INITIAL_SERVER_SEQ;
-uint32_t server_ack_no = 0;
-uint16_t connection_id = 0;
-
-uint32_t client_seq_no = INITIAL_CLIENT_SEQ;
-uint32_t client_ack_no = 0;
-
-bool flags[NUM_FLAGS];	// ASF
-
-void handshake(int sockfd, struct sockaddr* addr, socklen_t addr_len){
-	// send syn
-
+void handshake(int sockfd, struct sockaddr* addr, socklen_t addr_len,
+				uint32_t& server_seq_no, uint32_t& server_ack_no, uint16_t& connection_id,
+				uint32_t& client_seq_no, uint32_t& client_ack_no, bool* flags)
+{
 	memset(flags, '\0', NUM_FLAGS);
-
+	// send syn
 	unsigned char buf[HEADER_SIZE];
 	createHeader(buf, client_seq_no, client_ack_no, connection_id, SYN, flags);
 
@@ -100,12 +92,21 @@ int main(int argc, char** argv){
 		exit(1);
 	}
 
-	sockaddr* serverSockAddr = result->ai_addr;
-	socklen_t serverSockAddrLength = result->ai_addrlen;
+	sockaddr* addr = result->ai_addr;
+	socklen_t addr_len = result->ai_addrlen;
 	// create a UDP socket
-	int serverSockFd = socket(AF_INET, SOCK_DGRAM, 0);
+	int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 
-	handshake(serverSockFd, serverSockAddr, serverSockAddrLength);
+	uint32_t server_seq_no = INITIAL_SERVER_SEQ;
+	uint32_t server_ack_no = 0;
+	uint16_t connection_id = 0;
+
+	uint32_t client_seq_no = INITIAL_CLIENT_SEQ;
+	uint32_t client_ack_no = 0;
+
+	bool flags[NUM_FLAGS];	// ASF
+
+	handshake(sockfd, addr, addr_len, server_seq_no, server_ack_no, connection_id, client_seq_no, client_ack_no, flags);
 
 	// Finish handshake with payload in ACK sent by client
 	// TODO: THIS IS PROBABLY WHERE YOU START A WHILE LOOP SENDING SEGMENTS WITH PAYLOAD AND RECEIVING ACKs
@@ -133,7 +134,7 @@ int main(int argc, char** argv){
 
 	// TODO: the send process and receive process can be put in their own functions
 
-	int length = sendto(serverSockFd, buf, HEADER_SIZE + bytesRead, MSG_CONFIRM, serverSockAddr, serverSockAddrLength);
+	int length = sendto(sockfd, buf, HEADER_SIZE + bytesRead, MSG_CONFIRM, addr, addr_len);
 
 	cerr << "Total bytes sent: " << length << endl;
 	printClientMessage("SEND", client_seq_no, client_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
@@ -141,7 +142,7 @@ int main(int argc, char** argv){
 	memset(buf, '\0', HEADER_SIZE);	
 	memset(flags, '\0', NUM_FLAGS);
 
-	length = recvfrom(serverSockFd, buf, HEADER_SIZE, 0, serverSockAddr, &serverSockAddrLength);
+	length = recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 	
 	processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
 
