@@ -29,16 +29,18 @@ Client: "RECV" <Sequence Number> <Acknowledgement Number> <Connection ID> <CWND>
 
 using namespace std;
 
+uint32_t server_seq_no = INITIAL_SERVER_SEQ;
+uint32_t server_ack_no = 0;
+uint16_t connection_id = 0;
+
+uint32_t client_seq_no = INITIAL_CLIENT_SEQ;
+uint32_t client_ack_no = 0;
+
+bool flags[NUM_FLAGS];	// ASF
+
 void handshake(int sockfd, struct sockaddr* addr, socklen_t addr_len){
 	// send syn
-	uint32_t server_seq_no = INITIAL_SERVER_SEQ;
-	uint32_t server_ack_no = 0;
-	uint16_t connection_id = 0;
 
-	uint32_t client_seq_no = INITIAL_CLIENT_SEQ;
-	uint32_t client_ack_no = 0;
-
-	bool flags[NUM_FLAGS];	// ASF
 	memset(flags, '\0', NUM_FLAGS);
 
 	unsigned char buf[HEADER_SIZE];
@@ -60,18 +62,9 @@ void handshake(int sockfd, struct sockaddr* addr, socklen_t addr_len){
 	cerr << "Total bytes received: " << length << endl;
 	printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
 
-	// send ack
-	memset(buf, '\0', HEADER_SIZE);	
-	memset(flags, '\0', NUM_FLAGS);
-
-	client_seq_no = server_ack_no;
-	client_ack_no = server_seq_no + 1;
-	createHeader(buf, client_seq_no, client_ack_no, connection_id, ACK, flags);
-	length = sendto(sockfd, buf, HEADER_SIZE, MSG_CONFIRM, addr, addr_len);
-
-	cerr << "Total bytes sent: " << length << endl;
-	printClientMessage("SEND", client_seq_no, client_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
-
+	// ACCORDING TO THE SPEC, THE ACK NEEDS TO HAVE THE DATA PAYLOAD SO IT IS NO LONGER IN THIS FUNCTION
+	// memset(buf, '\0', HEADER_SIZE);	
+	// memset(flags, '\0', NUM_FLAGS);
 }
 
 int main(int argc, char** argv){
@@ -124,17 +117,30 @@ int main(int argc, char** argv){
 	// ssize_t length = recvfrom(serverSockFd, buf, 524, 0, &addr, &addr_len);
 	// std::cerr << "DATA received " << length << " bytes from : " << inet_ntoa(((struct sockaddr_in*) & addr)->sin_addr) << std::endl;
 
+	client_seq_no = server_ack_no;
+	client_ack_no = server_seq_no + 1;
+
+	unsigned char buf[MAX_SIZE];
+	memset(flags, '\0', NUM_FLAGS);
+
+	createHeader(buf, client_seq_no, client_ack_no, connection_id, ACK, flags);
 	// open file to transfer from client to server
-	// int fileToTransferFd = open(fileName, O_RDONLY);
-	// if (fileToTransferFd == -1) {
-	// 	cerr << "ERROR: unable to open file" << endl;
-	// 	exit(1);
-	// }
-	// struct stat fdStat;
-	// fstat(fileToTransferFd, &fdStat);
-	// uint8_t fileBuffer[fdStat.st_size];
-	// size_t bytesRead = read(fileToTransferFd, fileBuffer, fdStat.st_size);
-	// cerr << bytesRead << " bytes read" << endl;
+	int filefd = open(fileName, O_RDONLY);
+	if (filefd == -1) {
+		cerr << "ERROR: unable to open file" << endl;
+		exit(1);
+	}
+	struct stat fdStat;
+	fstat(filefd, &fdStat);
+	size_t bytesRead = read(filefd, buf + HEADER_SIZE, fdStat.st_size);
+	cerr << bytesRead << " bytes read from file" << endl;
+
+	int length = sendto(serverSockFd, buf, HEADER_SIZE + bytesRead, MSG_CONFIRM, serverSockAddr, serverSockAddrLength);
+
+	cerr << "Total bytes sent: " << length << endl;
+	printClientMessage("SEND", client_seq_no, client_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
+
+
 	// sendto(serverSockFd, fileBuffer, bytesRead, MSG_CONFIRM, serverSockAddr, serverSockAddrLength);
 
 	// struct sockaddr addr;

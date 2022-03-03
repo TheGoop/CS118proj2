@@ -39,6 +39,9 @@ struct sockaddr_in servaddr;
 
 int main(int argc, char **argv)
 {
+    // std::ofstream sackoftacos = std::ofstream("test/1.file");
+    // sackoftacos << "woo";
+    // sackoftacos.close();
     char *port;
 
     // directory to store files
@@ -63,7 +66,6 @@ int main(int argc, char **argv)
     // // 4097
     // // 010
     // processHeader(test, currSeq, currAck, currID, flags);
-
     if (argc != 3)
     {
         runError(1);
@@ -84,7 +86,7 @@ int main(int argc, char **argv)
     direc = argv[2];
     std::cerr << argv[1] << std::endl
               << argv[2] << std::endl;
-
+    
     makeSocket(port);
 
     signal(SIGQUIT, signalHandler);
@@ -99,7 +101,7 @@ int main(int argc, char **argv)
 
         // recieve packet from Client
         ssize_t length = recvfrom(sock, recieved_msg, MAX_SIZE, 0, &addr, &addr_len);
-        std::cerr << "DATA received " << length << " bytes from: " << inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr) << std::endl;
+        std::cerr << "Total bytes received: " << length << std::endl;
 
         processHeader(recieved_msg, currSeq, currAck, currID, flags);
         printServerMessage("RECV", currSeq, currAck, currID, flags);
@@ -120,28 +122,27 @@ int main(int argc, char **argv)
             length = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
             printServerMessage("SEND", currSeq, currAck, currID, flags);
 
-            std::cout << length << " bytes sent" << std::endl;
+            std::cout << "Total bytes sent: " << length << std::endl;
         }
 
-        // if its a normal packet - NO SYN/ACK/SYN-ACK/FIN/FIN-ACK
-        else if (!flags[0] && !flags[1] && !flags[2])
+        // if its a normal packet - NO SYN or FIN
+        else if (!flags[1] && !flags[2])
         {
             // printf("DATA PAYLOAD PACKET RECIEVED\n");
 
             // check to see if this connection ID is valid and not already terminated
-            if (currID < connections.size() && connections[currID - 1] != NULL)
+            if (currID <= connections.size() && connections[currID - 1] != NULL)
             {
                 // write to connections[currID - 1]
                 processPayload(recieved_msg, recieved_payload);
+                std::cerr << recieved_payload << std::endl;
                 *connections[currID - 1] << recieved_payload;
 
                 // create ACK to send back to client
-                unsigned char msg[HEADER_SIZE] = "";
+                unsigned char msg[HEADER_SIZE];
+                int previous_seq = currSeq;
                 currSeq = currAck;
-                currAck = incrementAck(currSeq, sizeof(recieved_payload));
-                flags[0] = true;
-                flags[1] = false;
-                flags[2] = false;
+                currAck = incrementAck(previous_seq, length - HEADER_SIZE);
                 createHeader(msg, currSeq, currAck, currID, ACK, flags);
 
                 length = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
