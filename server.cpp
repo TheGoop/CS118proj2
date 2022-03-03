@@ -91,22 +91,23 @@ int main(int argc, char **argv)
 
     while (1)
     {
-        unsigned char buf[MAX_SIZE];
-        memset(buf, '\0', MAX_SIZE);
+        unsigned char recieved_payload[MAX_PAYLOAD_SIZE];
+        unsigned char recieved_msg[MAX_SIZE];
+        memset(recieved_msg, '\0', MAX_SIZE);
         struct sockaddr addr;
         socklen_t addr_len = sizeof(struct sockaddr);
 
         // recieve packet from Client
-        ssize_t length = recvfrom(sock, buf, MAX_SIZE, 0, &addr, &addr_len);
+        ssize_t length = recvfrom(sock, recieved_msg, MAX_SIZE, 0, &addr, &addr_len);
         std::cerr << "DATA received " << length << " bytes from: " << inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr) << std::endl;
 
-        processHeader(buf, currSeq, currAck, currID, flags);
+        processHeader(recieved_msg, currSeq, currAck, currID, flags);
         printServerMessage("RECV", currSeq, currAck, currID, flags);
 
         // if this is a SYN packet from client (Aka new client/new connection)
         if (flags[1] && !flags[0])
         {
-            printf("SYN RECIEVED\n");
+            // printf("SYN RECIEVED\n");
             // Allocate a file writer for this new client
             makeConnection(direc);
             unsigned char msg[HEADER_SIZE] = "";
@@ -121,11 +122,43 @@ int main(int argc, char **argv)
 
             std::cout << length << " bytes sent" << std::endl;
         }
+
+        // if its a normal packet - NO SYN/ACK/SYN-ACK/FIN/FIN-ACK
+        else if (!flags[0] && !flags[1] && !flags[2])
+        {
+            // printf("DATA PAYLOAD PACKET RECIEVED\n");
+
+            // check to see if this connection ID is valid and not already terminated
+            if (currID < connections.size() && connections[currID - 1] != NULL)
+            {
+                // write to connections[currID - 1]
+                processPayload(recieved_msg, recieved_payload);
+                *connections[currID - 1] << recieved_payload;
+
+                // create ACK to send back to client
+                unsigned char msg[HEADER_SIZE] = "";
+                currSeq = currAck;
+                currAck = incrementAck(currSeq, sizeof(recieved_payload));
+                flags[0] = true;
+                flags[1] = false;
+                flags[2] = false;
+                createHeader(msg, currSeq, currAck, currID, ACK, flags);
+
+                length = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
+                printServerMessage("SEND", currSeq, currAck, currID, flags);
+                std::cout << length << " bytes sent" << std::endl;
+            }
+            else
+            {
+                // received packet is dropped (e.g., unknown connection ID):
+                printServerMessage("DROP", currSeq, currAck, currID, flags);
+            }
+        }
         memset(flags, '\0', NUM_FLAGS);
 
         // unsigned char head[HEADER_SIZE];
         // createHeader(head, INITIAL_SERVER_SEQ, currSeq + 1, currID, SYN_ACK);
-        // processHeader(buf, currSeq, currAck, currID, flags);
+        // processHeader(recieved_msg, currSeq, currAck, currID, flags);
         // length = sendto(sock, head, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
         // std::cout << length << " bytes ACK sent" << std::endl;
     }
@@ -184,7 +217,8 @@ void endProgram()
 void makeConnection(std::string direc)
 {
     connections.push_back(new std::ofstream(direc + "/" +
-                                            std::to_string(connections.size() + 1) + ".file"));
+                                                std::to_string(connections.size() + 1) + ".file",
+                                            std::ios::app));
 }
 
 // simple error function
