@@ -72,7 +72,7 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 			  uint32_t &client_seq_no, bool *flags)
 {
 	memset(flags, '\0', NUM_FLAGS);
-	// send syn
+
 	unsigned char buf[HEADER_SIZE];
 	createHeader(buf, client_seq_no, 0, connection_id, FIN, flags);
 
@@ -263,9 +263,6 @@ int main(int argc, char **argv)
 	}
 	cerr << counter << " bytes read from file" << endl;
 
-	// TODO: TO CHECK IF ALL BYTES OF THE FILE HAVE BEEN ACK'D, MAYBE READ THE ENTIRE FILE INTO A BUFFER,
-	// GET LENGTH OF FILE, THEN COMPARE LENGTH TO SERVER ACK NO - INITIAL CLIENT SEQ
-	// ONCE LENGTH == SERVER ACK NO - INITIAL CLIENT SEQ, THEN START TEARDOWN WITH FIN
 	if (fdStat.st_size != server_ack_no - INITIAL_CLIENT_SEQ - 1)
 	{
 		cerr << "Server has not successfully received all bytes" << endl;
