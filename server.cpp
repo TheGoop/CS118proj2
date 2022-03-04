@@ -106,7 +106,6 @@ int main(int argc, char **argv)
         processHeader(recieved_msg, currClientSeq, currClientAck, currID, flags);
         printServerMessage("RECV", currClientSeq, currClientAck, currID, flags);
         
-
         // if this is a SYN packet from client (Aka new client/new connection)
         if (flags[1] && !flags[0])
         {
@@ -122,7 +121,7 @@ int main(int argc, char **argv)
             ssize_t bytes_sent = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
             printServerMessage("SEND", currServerSeq, currServerAck, currID, flags);
 
-            std::cerr << "Total bytes sent: " << bytes_sent << std::endl;
+            // std::cerr << "Total bytes sent: " << bytes_sent << std::endl;
         }
 
         // if its a normal packet - NO SYN or FIN
@@ -147,7 +146,7 @@ int main(int argc, char **argv)
 
                 ssize_t bytes_sent = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
                 printServerMessage("SEND", currServerSeq, currServerAck, currID, flags);
-                std::cerr << "Total bytes sent: " << bytes_sent << std::endl;
+                // std::cerr << "Total bytes sent: " << bytes_sent << std::endl;
             }
             else
             {
@@ -159,6 +158,7 @@ int main(int argc, char **argv)
         // FIN stuff
         else if (flags[2])
         {
+            memset(flags, '\0', NUM_FLAGS);
             // create ACK to send back to client
             unsigned char msg[HEADER_SIZE];
             currServerAck = incrementSeq(currClientSeq, 1);
@@ -166,40 +166,38 @@ int main(int argc, char **argv)
 
             ssize_t bytes_sent = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
             printServerMessage("SEND", currServerSeq, currServerAck, currID, flags);
-            std::cout << "Total bytes sent: " << bytes_sent << std::endl;
+            // std::cerr << "Total bytes sent: " << bytes_sent << std::endl;
 
             fin = true;
             memset(flags, '\0', NUM_FLAGS);
-            break;
-        }
-        memset(flags, '\0', NUM_FLAGS);
-    }
 
-    if (fin)
-    {
-        while (1)
-        {
-            // create ACK to send back to client
-            unsigned char msg[HEADER_SIZE];
-            createHeader(msg, currServerSeq, 0, currID, FIN, flags);
+            // Send FIN: the client will respond with ACK for 2 seconds (if its ACK is lost)
+            // Close connection when server correctly receives ACK
+            // TODO: send another FIN if client ACK is lost
+
+            memset(msg, '\0', HEADER_SIZE);
+            currServerAck = 0;
+            createHeader(msg, currServerSeq, currServerAck, currID, FIN, flags);
 
             int length = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
             printServerMessage("SEND", currServerSeq, currServerAck, currID, flags);
-            std::cout << "Total bytes sent: " << length << std::endl;
+            // std::cerr << "Total bytes sent: " << length << std::endl;
             
-            unsigned char recieved_msg[MAX_PACKET_SIZE];
-            memset(recieved_msg, '\0', MAX_PACKET_SIZE);
+            memset(msg, '\0', HEADER_SIZE);
 
-            length = recvfrom(sock, recieved_msg, HEADER_SIZE, 0, &addr, &addr_len);
+            length = recvfrom(sock, msg, HEADER_SIZE, 0, &addr, &addr_len);
 
-	        processHeader(recieved_msg, currClientSeq, currClientAck, currID, flags);
+            processHeader(msg, currClientSeq, currClientAck, currID, flags);
             printServerMessage("RECV", currClientSeq, currClientAck, currID, flags);
-
-            break;
+            
+            // If properly receive ACK from client for server FIN, close connection
+            if (flags[0] && currClientAck == incrementSeq(currServerSeq, 1) && fin){
+                std::cerr << "Connection " << currID << " closing..." << std::endl;
+                (*connections[currID - 1]).close();
+            }
         }
-        
+        memset(flags, '\0', NUM_FLAGS);
     }
-
     endProgram();
     return 0;
 }

@@ -28,9 +28,6 @@ Client: "RECV" <Sequence Number> <Acknowledgement Number> <Connection ID> <CWND>
 #include "constants.h"
 #include "utils.h"
 
-#define CLOCKID CLOCK_MONOTONIC
-#define SIG SIGRTMIN
-
 using namespace std;
 
 void handshake(int sockfd, struct sockaddr *addr, socklen_t addr_len,
@@ -44,7 +41,7 @@ void handshake(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 
 	int length = sendto(sockfd, buf, HEADER_SIZE, MSG_CONFIRM, addr, addr_len);
 
-	cerr << "Total bytes sent: " << length << endl;
+	// cerr << "Total bytes sent: " << length << endl;
 	printClientMessage("SEND", client_seq_no, client_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
 
 	// receive syn-ack
@@ -55,7 +52,7 @@ void handshake(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 
 	processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
 
-	cerr << "Total bytes received: " << length << endl;
+	// cerr << "Total bytes received: " << length << endl;
 	printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
 
 	// send ack is completed after handshake
@@ -69,7 +66,7 @@ static void timerend(union sigval val)
 
 void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 			  uint32_t &server_seq_no, uint32_t &server_ack_no, uint16_t &connection_id,
-			  uint32_t &client_seq_no, bool *flags)
+			  uint32_t &client_seq_no, uint32_t &client_ack_no, bool *flags)
 {
 	memset(flags, '\0', NUM_FLAGS);
 
@@ -78,10 +75,9 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 
 	int length = sendto(sockfd, buf, HEADER_SIZE, MSG_CONFIRM, addr, addr_len);
 
-	cerr << "Total bytes sent: " << length << endl;
+	// cerr << "Total bytes sent: " << length << endl;
 	printClientMessage("SEND", client_seq_no, 0, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
 
-	// receive syn-ack
 	memset(buf, '\0', HEADER_SIZE);
 	memset(flags, '\0', NUM_FLAGS);
 
@@ -89,9 +85,11 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 
 	processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
 
-	cerr << "Total bytes received: " << length << endl;
+	// cerr << "Total bytes received: " << length << endl;
 	printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
 
+	client_seq_no = server_ack_no;
+	
 	timer_t timerid;
 	struct sigevent sev;
 	struct itimerspec its;
@@ -103,7 +101,7 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 	sev.sigev_notify_function = timerend;
 	sev.sigev_notify_attributes = NULL;
 	sev.sigev_value = arg;
-	if (timer_create(CLOCKID, &sev, &timerid) == -1)
+	if (timer_create(CLOCK_MONOTONIC, &sev, &timerid) == -1)
 	{
 		cerr << "Timer create error" << endl;
 		exit(1);
@@ -111,7 +109,7 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 	/* Start the timer */
 	its.it_value.tv_sec = 2;
 	its.it_value.tv_nsec = 0;
-	its.it_interval.tv_sec = 2;
+	its.it_interval.tv_sec = 0;
 	its.it_interval.tv_nsec = 0;
 
 	cerr << "Timer start" << endl;
@@ -123,21 +121,21 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 
 	length = recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 
-	processHeader(buf, server_seq_no, server_ack_no, connection_id, flags, false);
+	processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
 
-	cerr << "Total bytes received: " << length << endl;
+	// cerr << "Total bytes received: " << length << endl;
 	printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
 
 	memset(flags, '\0', NUM_FLAGS);
 	memset(buf, '\0', HEADER_SIZE);
 
-	createHeader(buf, server_ack_no, incrementSeq(server_seq_no, 1), connection_id, ACK, flags);
+	client_ack_no = incrementSeq(server_seq_no, 1);
+	createHeader(buf, client_seq_no, client_ack_no, connection_id, ACK, flags);
 
 	length = sendto(sockfd, buf, HEADER_SIZE, MSG_CONFIRM, addr, addr_len);
 
-	cerr << "Total bytes sent: " << length << endl;
-	printClientMessage("SEND", server_ack_no, incrementSeq(server_seq_no, 1), connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
-
+	// cerr << "Total bytes sent: " << length << endl;
+	printClientMessage("SEND", client_seq_no, client_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
 	// TODO: Handle retransmissions for FIN/ACK
 	// Code exits at timer handler
 	while(1);
@@ -243,7 +241,7 @@ int main(int argc, char **argv)
 
 	processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
 
-	cerr << "Total bytes received: " << length << endl;
+	// cerr << "Total bytes received: " << length << endl;
 	printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
 
 	while (totalBytes > 0)
@@ -286,8 +284,10 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 	cerr << "Sending FIN..." << endl;
-	teardown(sockfd, addr, addr_len, server_seq_no, server_ack_no, connection_id, server_ack_no, flags);
+	close(filefd);
 
-	// close(filefd);
-	// exit(0);
+	client_seq_no = server_ack_no;
+	teardown(sockfd, addr, addr_len, server_seq_no, server_ack_no, connection_id, client_seq_no, client_ack_no, flags);
+
+	exit(0);
 }

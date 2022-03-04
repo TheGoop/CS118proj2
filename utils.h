@@ -48,16 +48,11 @@ void createHeader(unsigned char *head, uint32_t seq, uint32_t ack, uint16_t conn
 // 8-9 chars are connection ID
 // 10 is unused
 // last 3 bits of 11 are ack, syn, and fin
-void processHeader(unsigned char *buf, uint32_t &currSeq, uint32_t &currAck, uint16_t &currID, bool *flags, bool setAck = true)
+void processHeader(unsigned char *buf, uint32_t &currSeq, uint32_t &currAck, uint16_t &currID, bool *flags)
 {
     currSeq = (buf[0] << 24 | buf[1] << 16 | buf[2] << 8 | buf[3]);
 
-    // Handle FIN from server so it doesn't set currAck on client
-    if (setAck)
-    {
-        // std::cerr << "FIN flag not detected" << std::endl;
-        currAck = (buf[4] << 24 | buf[5] << 16 | buf[6] << 8 | buf[7]);
-    }
+    currAck = (buf[4] << 24 | buf[5] << 16 | buf[6] << 8 | buf[7]);
 
     currID = (buf[8] << 8 | buf[9]);
 
