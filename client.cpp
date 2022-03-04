@@ -182,8 +182,6 @@ int main(int argc, char **argv)
 	// Also updates the seq_no, ack_no, conn_id
 	handshake(sockfd, addr, addr_len, server_seq_no, server_ack_no, connection_id, client_seq_no, client_ack_no, flags);
 
-	// Finish handshake with payload in ACK sent by client
-	// TODO: THIS IS PROBABLY WHERE YOU START A WHILE LOOP SENDING SEGMENTS WITH PAYLOAD AND RECEIVING ACKs
 	unsigned char buf[MAX_PACKET_SIZE];
 	memset(flags, '\0', NUM_FLAGS);
 
@@ -263,9 +261,6 @@ int main(int argc, char **argv)
 	}
 	cerr << counter << " bytes read from file" << endl;
 
-	// TODO: TO CHECK IF ALL BYTES OF THE FILE HAVE BEEN ACK'D, MAYBE READ THE ENTIRE FILE INTO A BUFFER,
-	// GET LENGTH OF FILE, THEN COMPARE LENGTH TO SERVER ACK NO - INITIAL CLIENT SEQ
-	// ONCE LENGTH == SERVER ACK NO - INITIAL CLIENT SEQ, THEN START TEARDOWN WITH FIN
 	if (fdStat.st_size != server_ack_no - INITIAL_CLIENT_SEQ - 1)
 	{
 		cerr << "Server has not successfully received all bytes" << endl;
@@ -273,11 +268,6 @@ int main(int argc, char **argv)
 	}
 	cerr << "Sending FIN..." << endl;
 	teardown(sockfd, addr, addr_len, server_seq_no, server_ack_no, connection_id, server_ack_no, flags);
-
-	// TODO: the send process and receive process can be put in their own functions
-
-	// 								HEADER_SIZE + payload
-	// cerr << "Total bytes sent: " << length << endl;
 
 	// close(filefd);
 	// exit(0);
