@@ -47,8 +47,10 @@ int main(int argc, char **argv)
     char* direc;
 
     // ints for handling headers
-    uint32_t currSeq = INITIAL_SERVER_SEQ;
-    uint32_t currAck = 0;
+    uint32_t currServerSeq = INITIAL_SERVER_SEQ;
+    uint32_t currClientSeq = INITIAL_CLIENT_SEQ;
+    uint32_t currServerAck = 0;
+    uint32_t currClientAck = 0;
     uint16_t currID = 0;
     uint16_t totalConnections = 0;
 
@@ -64,7 +66,7 @@ int main(int argc, char **argv)
     // // 5426
     // // 4097
     // // 010
-    // processHeader(test, currSeq, currAck, currID, flags);
+    // processHeader(test, currServerSeq, currServerAck, currID, flags);
     if (argc != 3)
     {
         runError(1);
@@ -101,8 +103,8 @@ int main(int argc, char **argv)
         ssize_t length = recvfrom(sock, recieved_msg, MAX_SIZE, 0, &addr, &addr_len);
         std::cerr << "Total bytes received: " << length << std::endl;
 
-        processHeader(recieved_msg, currSeq, currAck, currID, flags);
-        printServerMessage("RECV", currSeq, currAck, currID, flags);
+        processHeader(recieved_msg, currClientSeq, currClientAck, currID, flags);
+        printServerMessage("RECV", currClientSeq, currClientAck, currID, flags);
 
         // if this is a SYN packet from client (Aka new client/new connection)
         if (flags[1] && !flags[0])
@@ -113,12 +115,11 @@ int main(int argc, char **argv)
             currID = totalConnections;
             makeConnection(direc, currID);
             unsigned char msg[HEADER_SIZE] = "";
-            currAck = incrementSeq(currSeq, 1);
-            currSeq = INITIAL_SERVER_SEQ;
-            createHeader(msg, currSeq, currAck, currID, SYN_ACK, flags);
+            currServerAck = incrementSeq(currClientSeq, 1);
+            createHeader(msg, currServerSeq, currServerAck, currID, SYN_ACK, flags);
 
             length = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
-            printServerMessage("SEND", currSeq, currAck, currID, flags);
+            printServerMessage("SEND", currServerSeq, currServerAck, currID, flags);
 
             std::cout << "Total bytes sent: " << length << std::endl;
         }
@@ -137,20 +138,32 @@ int main(int argc, char **argv)
 
                 // create ACK to send back to client
                 unsigned char msg[HEADER_SIZE];
-                int previous_seq = currSeq;
-                currSeq = currAck;
-                currAck = incrementAck(previous_seq, length - HEADER_SIZE);
-                createHeader(msg, currSeq, currAck, currID, ACK, flags);
+                currServerSeq = currClientAck;
+                currServerAck = incrementAck(currClientSeq, length - HEADER_SIZE);
+                createHeader(msg, currServerSeq, currServerAck, currID, ACK, flags);
 
                 length = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
-                printServerMessage("SEND", currSeq, currAck, currID, flags);
+                printServerMessage("SEND", currServerSeq, currServerAck, currID, flags);
                 std::cout << "Total bytes sent: " << length << std::endl;
             }
             else
             {
                 // received packet is dropped (e.g., unknown connection ID):
-                printServerMessage("DROP", currSeq, currAck, currID, flags);
+                printServerMessage("DROP", currClientSeq, currClientAck, currID, flags);
             }
+        }
+
+        // FIN stuff
+        else if (flags[2])
+        {
+            // create ACK to send back to client
+            unsigned char msg[HEADER_SIZE];
+            currServerAck = incrementSeq(currClientSeq, 1);
+            createHeader(msg, currServerSeq, currServerAck, currID, ACK, flags);
+
+            length = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
+            printServerMessage("SEND", currServerSeq, currServerAck, currID, flags);
+            std::cout << "Total bytes sent: " << length << std::endl;
         }
         memset(flags, '\0', NUM_FLAGS);
     }
