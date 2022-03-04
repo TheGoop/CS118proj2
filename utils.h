@@ -52,7 +52,12 @@ void processHeader(unsigned char *buf, uint32_t &currSeq, uint32_t &currAck, uin
 {
     currSeq = (buf[0] << 24 | buf[1] << 16 | buf[2] << 8 | buf[3]);
 
-    currAck = (buf[4] << 24 | buf[5] << 16 | buf[6] << 8 | buf[7]);
+    // TODO: Handle FIN from server so it doesn't set currAck on client
+    if (true)
+    {
+        std::cerr << "FIN flag detected" << std::endl;
+        currAck = (buf[4] << 24 | buf[5] << 16 | buf[6] << 8 | buf[7]);
+    }
 
     currID = (buf[8] << 8 | buf[9]);
 

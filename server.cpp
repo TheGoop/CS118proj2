@@ -167,6 +167,10 @@ int main(int argc, char **argv)
             ssize_t bytes_sent = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
             printServerMessage("SEND", currServerSeq, currServerAck, currID, flags);
             std::cout << "Total bytes sent: " << bytes_sent << std::endl;
+
+            fin = true;
+            memset(flags, '\0', NUM_FLAGS);
+            break;
         }
         memset(flags, '\0', NUM_FLAGS);
     }
@@ -182,6 +186,16 @@ int main(int argc, char **argv)
             int length = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
             printServerMessage("SEND", currServerSeq, currServerAck, currID, flags);
             std::cout << "Total bytes sent: " << length << std::endl;
+            
+            unsigned char recieved_msg[MAX_PACKET_SIZE];
+            memset(recieved_msg, '\0', MAX_PACKET_SIZE);
+
+            length = recvfrom(sock, recieved_msg, HEADER_SIZE, 0, &addr, &addr_len);
+
+	        processHeader(recieved_msg, currClientSeq, currClientAck, currID, flags);
+            printServerMessage("RECV", currClientSeq, currClientAck, currID, flags);
+
+            break;
         }
         
     }

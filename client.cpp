@@ -121,7 +121,24 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 		exit(1);
 	}
 
-	sleep(5);
+	length = recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
+
+	processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
+
+	cerr << "Total bytes received: " << length << endl;
+	printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
+
+	memset(flags, '\0', NUM_FLAGS);
+	memset(buf, '\0', HEADER_SIZE);
+
+	createHeader(buf, server_ack_no, incrementAck(server_ack_no, 1), connection_id, ACK, flags);
+
+	length = sendto(sockfd, buf, HEADER_SIZE, MSG_CONFIRM, addr, addr_len);
+
+	cerr << "Total bytes sent: " << length << endl;
+	printClientMessage("SEND", server_ack_no, incrementAck(server_ack_no, 1), connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
+
+	while(1);
 }
 
 int main(int argc, char **argv)
