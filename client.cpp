@@ -23,9 +23,13 @@ Client: "RECV" <Sequence Number> <Acknowledgement Number> <Connection ID> <CWND>
 #include <list>
 #include <sys/stat.h>
 #include <time.h>
+#include <signal.h>
 
 #include "constants.h"
 #include "utils.h"
+
+#define CLOCKID CLOCK_MONOTONIC
+#define SIG SIGRTMIN
 
 using namespace std;
 
@@ -57,6 +61,12 @@ void handshake(int sockfd, struct sockaddr* addr, socklen_t addr_len,
 	// send ack is completed after handshake
 }
 
+static void timerend(union sigval val)
+{
+	cerr << "Timer ended" << endl;
+	exit(0);
+}
+
 void teardown(int sockfd, struct sockaddr* addr, socklen_t addr_len,
 				uint32_t& server_seq_no, uint32_t& server_ack_no, uint16_t& connection_id,
 				uint32_t& client_seq_no, bool* flags)
@@ -82,8 +92,38 @@ void teardown(int sockfd, struct sockaddr* addr, socklen_t addr_len,
 	cerr << "Total bytes received: " << length << endl;
 	printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
 	
-	// send ack is completed after handshake
+    timer_t timerid;
+    struct sigevent sev;
+    struct itimerspec its;
+	/* Create the timer */ 
+    // 3 elements: ID, timeout value, callback
+    union sigval arg;
+    arg.sival_int = 54321;
+    sev.sigev_notify = SIGEV_THREAD;
+    sev.sigev_notify_function = timerend;
+    sev.sigev_notify_attributes = NULL;
+    sev.sigev_value = arg;
+    if (timer_create(CLOCKID, &sev, &timerid) == -1)
+	{
+        cerr << "Timer create error" << endl;
+		exit(1);
+	}
+    /* Start the timer */
+    its.it_value.tv_sec = 2;
+    its.it_value.tv_nsec = 0;
+    its.it_interval.tv_sec = 2;
+    its.it_interval.tv_nsec = 0;
+
+	cerr << "Timer start" << endl;
+	if (timer_settime(timerid, 0, &its, NULL) == -1)
+	{
+        cerr << "Timer set error" << endl;
+		exit(1);
+	}
+
+	sleep(5);
 }
+
 
 int main(int argc, char** argv){
 	// Check if number of args is correct
@@ -227,7 +267,7 @@ int main(int argc, char** argv){
 	// 								HEADER_SIZE + payload
 	//cerr << "Total bytes sent: " << length << endl;
 
-	close(filefd);
-	exit(0);
+	// close(filefd);
+	// exit(0);
 }
 
