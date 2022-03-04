@@ -123,7 +123,7 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 
 	length = recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 
-	processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
+	processHeader(buf, server_seq_no, server_ack_no, connection_id, flags, false);
 
 	cerr << "Total bytes received: " << length << endl;
 	printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
@@ -131,13 +131,15 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 	memset(flags, '\0', NUM_FLAGS);
 	memset(buf, '\0', HEADER_SIZE);
 
-	createHeader(buf, server_ack_no, incrementAck(server_ack_no, 1), connection_id, ACK, flags);
+	createHeader(buf, server_ack_no, incrementSeq(server_seq_no, 1), connection_id, ACK, flags);
 
 	length = sendto(sockfd, buf, HEADER_SIZE, MSG_CONFIRM, addr, addr_len);
 
 	cerr << "Total bytes sent: " << length << endl;
-	printClientMessage("SEND", server_ack_no, incrementAck(server_ack_no, 1), connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
+	printClientMessage("SEND", server_ack_no, incrementSeq(server_seq_no, 1), connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
 
+	// TODO: Handle retransmissions for FIN/ACK
+	// Code exits at timer handler
 	while(1);
 }
 
