@@ -122,7 +122,7 @@ int main(int argc, char **argv)
             ssize_t bytes_sent = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
             printServerMessage("SEND", currServerSeq, currServerAck, currID, flags);
 
-            std::cout << "Total bytes sent: " << bytes_sent << std::endl;
+            std::cerr << "Total bytes sent: " << bytes_sent << std::endl;
         }
 
         // if its a normal packet - NO SYN or FIN
@@ -147,7 +147,7 @@ int main(int argc, char **argv)
 
                 ssize_t bytes_sent = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
                 printServerMessage("SEND", currServerSeq, currServerAck, currID, flags);
-                std::cout << "Total bytes sent: " << bytes_sent << std::endl;
+                std::cerr << "Total bytes sent: " << bytes_sent << std::endl;
             }
             else
             {
