@@ -18,7 +18,6 @@ Server: "SEND" <Sequence Number> <Acknowledgement Number> <Connection ID> ["ACK"
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
-#include <stdio.h>
 #include <csignal>
 #include <math.h>
 #include <sys/types.h>
@@ -40,16 +39,10 @@ int sock;
 // address
 struct sockaddr_in servaddr;
 
-ssize_t blength = 0;
-
 int main(int argc, char **argv)
 {
     char *port;
-    // const char *path="/home/brendan42069/cs118/CS118proj2/test/3.file";
-    // std::ofstream file(path); //open in constructor
-    // std::string data("data to write to file");
-    // file << data;
-    // return 0;
+
     // directory to store files
     char* direc;
 
@@ -88,13 +81,14 @@ int main(int argc, char **argv)
         runError(2);
     }
 
-    direc = argv[2];
+    direc = argv[2];    
     makeSocket(port);
 
     signal(SIGQUIT, signalHandler);
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
     
+
     while (1)
     {
         unsigned char recieved_payload[MAX_PAYLOAD_SIZE];
@@ -104,8 +98,8 @@ int main(int argc, char **argv)
         socklen_t addr_len = sizeof(struct sockaddr);
 
         // recieve packet from client
-        blength += recvfrom(sock, recieved_msg, MAX_SIZE, 0, &addr, &addr_len);
-        ssize_t length = 0;
+        ssize_t length = recvfrom(sock, recieved_msg, MAX_SIZE, 0, &addr, &addr_len);
+        std::cerr << "Total bytes received: " << length << std::endl;
 
         processHeader(recieved_msg, currSeq, currAck, currID, flags);
         printServerMessage("RECV", currSeq, currAck, currID, flags);
@@ -199,7 +193,6 @@ void makeSocket(char *port)
 // should always be run before any exits
 void endProgram()
 {
-    std::cerr << "Total bytes received: " << blength << std::endl;
     for (size_t x = 0; x < connections.size(); x++)
     {
         (*connections[x]).close();
@@ -215,12 +208,12 @@ void endProgram()
 */
 void makeConnection(char* direc, u_int16_t currID)
 {
+    char path[128];
     if (direc[0] == '/'){
         direc++;
     }
-    char path[128];
     sprintf(path, "%s/%u.file", direc, currID);
-    std::cerr << path << std::endl;
+    // std::cerr << path << std::endl;
     std::ofstream* out = new std::ofstream(path);
     connections.push_back(out);
 }
