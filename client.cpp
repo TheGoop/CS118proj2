@@ -72,7 +72,7 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 			  uint32_t &client_seq_no, bool *flags)
 {
 	memset(flags, '\0', NUM_FLAGS);
-	// send syn
+
 	unsigned char buf[HEADER_SIZE];
 	createHeader(buf, client_seq_no, 0, connection_id, FIN, flags);
 
