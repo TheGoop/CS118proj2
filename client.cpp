@@ -126,23 +126,23 @@ int main(int argc, char** argv){
 	}
 	struct stat fdStat;
 	fstat(filefd, &fdStat);
-	size_t bytesRead = 0;
-	int counter = 0;
+	size_t bytesRead = 0, totalBytes = fdStat.st_size, counter = 0;
 	int length;
-	while (counter < fdStat.st_size)
+
+	while (totalBytes > 0)
 	{
-		if (fdStat.st_size - counter > MAX_PAYLOAD_SIZE) {
-			bytesRead += read(filefd, buf + HEADER_SIZE, MAX_PAYLOAD_SIZE);
-			length = sendto(sockfd, buf, HEADER_SIZE + MAX_PAYLOAD_SIZE, MSG_CONFIRM, addr, addr_len);
+		if (totalBytes >= MAX_PAYLOAD_SIZE) {
+			bytesRead = read(filefd, buf + HEADER_SIZE, MAX_PAYLOAD_SIZE);
 		}
 		else {
-			bytesRead += read(filefd, buf + HEADER_SIZE, fdStat.st_size - counter);
-			length = sendto(sockfd, buf, HEADER_SIZE + fdStat.st_size - counter, MSG_CONFIRM, addr, addr_len);
+			bytesRead = read(filefd, buf + HEADER_SIZE, totalBytes);
 		}
-		counter += MAX_PAYLOAD_SIZE;
+		counter += bytesRead;
+		totalBytes -= bytesRead;
+		length = sendto(sockfd, buf, HEADER_SIZE + bytesRead, MSG_CONFIRM, addr, addr_len);
 		printClientMessage("SEND", client_seq_no, client_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);	
 	}
-	cerr << bytesRead << " bytes read from file" << endl;
+	cerr << counter << " bytes read from file" << endl;
 
 	// TODO: TO CHECK IF ALL BYTES OF THE FILE HAVE BEEN ACK'D, MAYBE READ THE ENTIRE FILE INTO A BUFFER,
 	// GET LENGTH OF FILE, THEN COMPARE LENGTH TO SERVER ACK NO - INITIAL CLIENT SEQ

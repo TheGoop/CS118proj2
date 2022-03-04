@@ -18,6 +18,7 @@ Server: "SEND" <Sequence Number> <Acknowledgement Number> <Connection ID> ["ACK"
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <stdio.h>
 #include <csignal>
 #include <math.h>
 #include <sys/types.h>
@@ -42,7 +43,11 @@ struct sockaddr_in servaddr;
 int main(int argc, char **argv)
 {
     char *port;
-
+    // const char *path="/home/brendan42069/cs118/CS118proj2/test/3.file";
+    // std::ofstream file(path); //open in constructor
+    // std::string data("data to write to file");
+    // file << data;
+    // return 0;
     // directory to store files
     char* direc;
 
@@ -81,14 +86,13 @@ int main(int argc, char **argv)
         runError(2);
     }
 
-    direc = argv[2];    
+    direc = argv[2];
     makeSocket(port);
 
     signal(SIGQUIT, signalHandler);
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
     
-
     while (1)
     {
         unsigned char recieved_payload[MAX_PAYLOAD_SIZE];
@@ -208,12 +212,12 @@ void endProgram()
 */
 void makeConnection(char* direc, u_int16_t currID)
 {
-    char path[128];
     if (direc[0] == '/'){
         direc++;
     }
+    char path[128];
     sprintf(path, "%s/%u.file", direc, currID);
-    // std::cerr << path << std::endl;
+    std::cerr << path << std::endl;
     std::ofstream* out = new std::ofstream(path);
     connections.push_back(out);
 }
