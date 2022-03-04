@@ -194,6 +194,8 @@ int main(int argc, char **argv)
             if (flags[0] && currClientAck == incrementSeq(currServerSeq, 1) && fin){
                 std::cerr << "Connection " << currID << " closing..." << std::endl;
                 (*connections[currID - 1]).close();
+                currServerAck = 0;
+                currServerSeq = INITIAL_SERVER_SEQ;
             }
         }
         memset(flags, '\0', NUM_FLAGS);
