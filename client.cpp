@@ -62,7 +62,7 @@ void teardown(int sockfd, struct sockaddr* addr, socklen_t addr_len,
 				uint32_t& client_seq_no, bool* flags)
 {
 	memset(flags, '\0', NUM_FLAGS);
-	// send syn
+
 	unsigned char buf[HEADER_SIZE];
 	createHeader(buf, client_seq_no, 0, connection_id, FIN, flags);
 
@@ -71,7 +71,6 @@ void teardown(int sockfd, struct sockaddr* addr, socklen_t addr_len,
 	cerr << "Total bytes sent: " << length << endl;
 	printClientMessage("SEND", client_seq_no, 0, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
 
-	// receive syn-ack
 	memset(buf, '\0', HEADER_SIZE);	
 	memset(flags, '\0', NUM_FLAGS);
 
@@ -81,8 +80,6 @@ void teardown(int sockfd, struct sockaddr* addr, socklen_t addr_len,
 
 	cerr << "Total bytes received: " << length << endl;
 	printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
-	
-	// send ack is completed after handshake
 }
 
 int main(int argc, char** argv){
@@ -138,7 +135,6 @@ int main(int argc, char** argv){
 	handshake(sockfd, addr, addr_len, server_seq_no, server_ack_no, connection_id, client_seq_no, client_ack_no, flags);
 
 	// Finish handshake with payload in ACK sent by client
-	// TODO: THIS IS PROBABLY WHERE YOU START A WHILE LOOP SENDING SEGMENTS WITH PAYLOAD AND RECEIVING ACKs
 	unsigned char buf[MAX_SIZE];
 	memset(flags, '\0', NUM_FLAGS);
 
@@ -211,9 +207,6 @@ int main(int argc, char** argv){
 	}
 	cerr << counter << " bytes read from file" << endl;
 
-	// TODO: TO CHECK IF ALL BYTES OF THE FILE HAVE BEEN ACK'D, MAYBE READ THE ENTIRE FILE INTO A BUFFER,
-	// GET LENGTH OF FILE, THEN COMPARE LENGTH TO SERVER ACK NO - INITIAL CLIENT SEQ
-	// ONCE LENGTH == SERVER ACK NO - INITIAL CLIENT SEQ, THEN START TEARDOWN WITH FIN
 	if (fdStat.st_size != server_ack_no - INITIAL_CLIENT_SEQ - 1)
 	{
 		cerr << "Server has not successfully received all bytes" << endl;
@@ -223,9 +216,6 @@ int main(int argc, char** argv){
 	teardown(sockfd, addr, addr_len, server_seq_no, server_ack_no, connection_id, server_ack_no, flags);
 
 	// TODO: the send process and receive process can be put in their own functions
-
-	// 								HEADER_SIZE + payload
-	//cerr << "Total bytes sent: " << length << endl;
 
 	close(filefd);
 	exit(0);
