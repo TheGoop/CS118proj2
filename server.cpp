@@ -28,12 +28,12 @@ Server: "SEND" <Sequence Number> <Acknowledgement Number> <Connection ID> ["ACK"
 
 void runError(int code);
 void endProgram();
-void makeConnection(char*  direc, u_int16_t currID);
+void makeConnection(char *direc, u_int16_t currID);
 void makeSocket(char *port);
 void signalHandler(int signum);
 
 // pointer to our file writers for each connection
-std::vector<std::ofstream*> connections;
+std::vector<std::ofstream *> connections;
 
 int sock;
 // address
@@ -44,7 +44,7 @@ int main(int argc, char **argv)
     char *port;
 
     // directory to store files
-    char* direc;
+    char *direc;
 
     // ints for handling headers
     uint32_t currServerSeq = INITIAL_SERVER_SEQ;
@@ -83,25 +83,23 @@ int main(int argc, char **argv)
         runError(2);
     }
 
-    direc = argv[2];    
+    direc = argv[2];
     makeSocket(port);
 
     signal(SIGQUIT, signalHandler);
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
-    
 
     while (1)
     {
-        unsigned char recieved_payload[MAX_PAYLOAD_SIZE];
-        unsigned char recieved_msg[MAX_SIZE];
-        memset(recieved_msg, '\0', MAX_SIZE);
+        unsigned char recieved_msg[MAX_PACKET_SIZE];
+        memset(recieved_msg, '\0', MAX_PACKET_SIZE);
         struct sockaddr addr;
         socklen_t addr_len = sizeof(struct sockaddr);
 
         // recieve packet from client
-        ssize_t length = recvfrom(sock, recieved_msg, MAX_SIZE, 0, &addr, &addr_len);
-        std::cerr << "Total bytes received: " << length << std::endl;
+        ssize_t bytes_recieved = recvfrom(sock, recieved_msg, MAX_PACKET_SIZE, 0, &addr, &addr_len);
+        std::cerr << "Total bytes received: " << bytes_recieved << std::endl;
 
         processHeader(recieved_msg, currClientSeq, currClientAck, currID, flags);
         printServerMessage("RECV", currClientSeq, currClientAck, currID, flags);
@@ -118,10 +116,10 @@ int main(int argc, char **argv)
             currServerAck = incrementSeq(currClientSeq, 1);
             createHeader(msg, currServerSeq, currServerAck, currID, SYN_ACK, flags);
 
-            length = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
+            ssize_t bytes_sent = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
             printServerMessage("SEND", currServerSeq, currServerAck, currID, flags);
 
-            std::cout << "Total bytes sent: " << length << std::endl;
+            std::cout << "Total bytes sent: " << bytes_sent << std::endl;
         }
 
         // if its a normal packet - NO SYN or FIN
@@ -133,18 +131,20 @@ int main(int argc, char **argv)
             if (currID <= connections.size() && connections[currID - 1] != NULL)
             {
                 // write to connections[currID - 1]
-                processPayload(recieved_msg, recieved_payload);
-                *connections[currID-1] << recieved_payload;
+                for (int i = HEADER_SIZE; i < bytes_recieved; i++)
+                {
+                    *connections[currID - 1] << recieved_msg[i];
+                }
 
                 // create ACK to send back to client
                 unsigned char msg[HEADER_SIZE];
                 currServerSeq = currClientAck;
-                currServerAck = incrementAck(currClientSeq, length - HEADER_SIZE);
+                currServerAck = incrementAck(currClientSeq, bytes_recieved - HEADER_SIZE);
                 createHeader(msg, currServerSeq, currServerAck, currID, ACK, flags);
 
-                length = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
+                ssize_t bytes_sent = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
                 printServerMessage("SEND", currServerSeq, currServerAck, currID, flags);
-                std::cout << "Total bytes sent: " << length << std::endl;
+                std::cout << "Total bytes sent: " << bytes_sent << std::endl;
             }
             else
             {
@@ -161,9 +161,9 @@ int main(int argc, char **argv)
             currServerAck = incrementSeq(currClientSeq, 1);
             createHeader(msg, currServerSeq, currServerAck, currID, ACK, flags);
 
-            length = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
+            ssize_t bytes_sent = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
             printServerMessage("SEND", currServerSeq, currServerAck, currID, flags);
-            std::cout << "Total bytes sent: " << length << std::endl;
+            std::cout << "Total bytes sent: " << bytes_sent << std::endl;
         }
         memset(flags, '\0', NUM_FLAGS);
     }
@@ -219,15 +219,16 @@ void endProgram()
     first client's file writer -> connections[0]
     second client's file writer -> connections[1]
 */
-void makeConnection(char* direc, u_int16_t currID)
+void makeConnection(char *direc, u_int16_t currID)
 {
     char path[128];
-    if (direc[0] == '/'){
+    if (direc[0] == '/')
+    {
         direc++;
     }
     sprintf(path, "%s/%u.file", direc, currID);
     // std::cerr << path << std::endl;
-    std::ofstream* out = new std::ofstream(path);
+    std::ofstream *out = new std::ofstream(path);
     connections.push_back(out);
 }
 

@@ -5,7 +5,7 @@
 
 const int MAX_PAYLOAD_SIZE = 512;
 const int HEADER_SIZE = 12;
-const int MAX_SIZE = 524;
+const int MAX_PACKET_SIZE = 524;
 const int MAX_SEQ_NO = 102400;
 const double RETRANS_TIMEOUT = 0.5;
 const int INITIAL_CWND = 512;
