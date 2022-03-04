@@ -9,11 +9,11 @@ default: clean server client
 all: server client
 
 server: $(CLASSES)
-	$(CXX) -o $@ $^ $(CXXFLAGS) $@.cpp
-	# $(CXX) -o dumClient $^ $(CXXFLAGS) dummyclient.cpp
+	$(CXX) -o $@ $^ $(CXXFLAGS) $@.cpp -lrt
+	# $(CXX) -o dumClient $^ $(CXXFLAGS) dummyclient.cpp -lrt
 
 client: $(CLASSES)
-	$(CXX) -o $@ $^ $(CXXFLAGS) $@.cpp
+	$(CXX) -o $@ $^ $(CXXFLAGS) $@.cpp -lrt
 
 clean:
 	rm -rf *.o *~ *.gch *.swp *.dSYM server client *.tar.gz *.data
