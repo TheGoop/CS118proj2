@@ -39,6 +39,8 @@ int sock;
 // address
 struct sockaddr_in servaddr;
 
+ssize_t blength = 0;
+
 int main(int argc, char **argv)
 {
     char *port;
@@ -88,7 +90,6 @@ int main(int argc, char **argv)
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
     
-
     while (1)
     {
         unsigned char recieved_payload[MAX_PAYLOAD_SIZE];
@@ -98,8 +99,8 @@ int main(int argc, char **argv)
         socklen_t addr_len = sizeof(struct sockaddr);
 
         // recieve packet from client
-        ssize_t length = recvfrom(sock, recieved_msg, MAX_SIZE, 0, &addr, &addr_len);
-        std::cerr << "Total bytes received: " << length << std::endl;
+        blength += recvfrom(sock, recieved_msg, MAX_SIZE, 0, &addr, &addr_len);
+        ssize_t length = 0;
 
         processHeader(recieved_msg, currSeq, currAck, currID, flags);
         printServerMessage("RECV", currSeq, currAck, currID, flags);
@@ -193,6 +194,7 @@ void makeSocket(char *port)
 // should always be run before any exits
 void endProgram()
 {
+    std::cerr << "Total bytes received: " << blength << std::endl;
     for (size_t x = 0; x < connections.size(); x++)
     {
         (*connections[x]).close();
