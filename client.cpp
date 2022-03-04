@@ -29,18 +29,12 @@ Client: "RECV" <Sequence Number> <Acknowledgement Number> <Connection ID> <CWND>
 
 using namespace std;
 
-void handshake(int sockfd, struct sockaddr* addr, socklen_t addr_len){
-	// send syn
-	uint32_t server_seq_no = INITIAL_SERVER_SEQ;
-	uint32_t server_ack_no = 0;
-	uint16_t connection_id = 0;
-
-	uint32_t client_seq_no = INITIAL_CLIENT_SEQ;
-	uint32_t client_ack_no = 0;
-
-	bool flags[NUM_FLAGS];	// ASF
+void handshake(int sockfd, struct sockaddr* addr, socklen_t addr_len,
+				uint32_t& server_seq_no, uint32_t& server_ack_no, uint16_t& connection_id,
+				uint32_t& client_seq_no, uint32_t& client_ack_no, bool* flags)
+{
 	memset(flags, '\0', NUM_FLAGS);
-
+	// send syn
 	unsigned char buf[HEADER_SIZE];
 	createHeader(buf, client_seq_no, client_ack_no, connection_id, SYN, flags);
 
@@ -59,19 +53,8 @@ void handshake(int sockfd, struct sockaddr* addr, socklen_t addr_len){
 
 	cerr << "Total bytes received: " << length << endl;
 	printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
-
-	// send ack
-	memset(buf, '\0', HEADER_SIZE);	
-	memset(flags, '\0', NUM_FLAGS);
-
-	client_seq_no = server_ack_no;
-	client_ack_no = server_seq_no + 1;
-	createHeader(buf, client_seq_no, client_ack_no, connection_id, ACK, flags);
-	length = sendto(sockfd, buf, HEADER_SIZE, MSG_CONFIRM, addr, addr_len);
-
-	cerr << "Total bytes sent: " << length << endl;
-	printClientMessage("SEND", client_seq_no, client_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
-
+	
+	// send ack is completed after handshake
 }
 
 int main(int argc, char** argv){
@@ -109,42 +92,84 @@ int main(int argc, char** argv){
 		exit(1);
 	}
 
-	sockaddr* serverSockAddr = result->ai_addr;
-	socklen_t serverSockAddrLength = result->ai_addrlen;
+	sockaddr* addr = result->ai_addr;
+	socklen_t addr_len = result->ai_addrlen;
 	// create a UDP socket
-	int serverSockFd = socket(AF_INET, SOCK_DGRAM, 0);
+	int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 
-	handshake(serverSockFd, serverSockAddr, serverSockAddrLength);
+	uint32_t server_seq_no = INITIAL_SERVER_SEQ;
+	uint32_t server_ack_no = 0;
+	uint16_t connection_id = 0;
 
-	// char buf[524];
-	// memset(buf, '\0', 524);
-	// struct sockaddr addr;
-	// socklen_t addr_len = sizeof(struct sockaddr);
+	uint32_t client_seq_no = INITIAL_CLIENT_SEQ;
+	uint32_t client_ack_no = 0;
 
-	// ssize_t length = recvfrom(serverSockFd, buf, 524, 0, &addr, &addr_len);
-	// std::cerr << "DATA received " << length << " bytes from : " << inet_ntoa(((struct sockaddr_in*) & addr)->sin_addr) << std::endl;
+	bool flags[NUM_FLAGS];	// ASF
+	
+	// Also updates the seq_no, ack_no, conn_id
+	handshake(sockfd, addr, addr_len, server_seq_no, server_ack_no, connection_id, client_seq_no, client_ack_no, flags);
 
+	// Finish handshake with payload in ACK sent by client
+	// TODO: THIS IS PROBABLY WHERE YOU START A WHILE LOOP SENDING SEGMENTS WITH PAYLOAD AND RECEIVING ACKs
+	client_seq_no = server_ack_no;
+	client_ack_no = server_seq_no + 1;
+
+	unsigned char buf[MAX_SIZE];
+	memset(flags, '\0', NUM_FLAGS);
+
+	createHeader(buf, client_seq_no, client_ack_no, connection_id, ACK, flags);
 	// open file to transfer from client to server
-	// int fileToTransferFd = open(fileName, O_RDONLY);
-	// if (fileToTransferFd == -1) {
-	// 	cerr << "ERROR: unable to open file" << endl;
-	// 	exit(1);
-	// }
-	// struct stat fdStat;
-	// fstat(fileToTransferFd, &fdStat);
-	// uint8_t fileBuffer[fdStat.st_size];
-	// size_t bytesRead = read(fileToTransferFd, fileBuffer, fdStat.st_size);
-	// cerr << bytesRead << " bytes read" << endl;
-	// sendto(serverSockFd, fileBuffer, bytesRead, MSG_CONFIRM, serverSockAddr, serverSockAddrLength);
+	int filefd = open(fileName, O_RDONLY);
+	if (filefd == -1) {
+		cerr << "ERROR: unable to open file" << endl;
+		exit(1);
+	}
+	struct stat fdStat;
+	fstat(filefd, &fdStat);
+	size_t bytesRead = 0;
+	int counter = 0;
+	int length;
+	while (counter < fdStat.st_size)
+	{
+		if (fdStat.st_size - counter > MAX_PAYLOAD_SIZE) {
+			bytesRead += read(filefd, buf + HEADER_SIZE, MAX_PAYLOAD_SIZE);
+			length = sendto(sockfd, buf, HEADER_SIZE + MAX_PAYLOAD_SIZE, MSG_CONFIRM, addr, addr_len);
+		}
+		else {
+			bytesRead += read(filefd, buf + HEADER_SIZE, fdStat.st_size - counter);
+			length = sendto(sockfd, buf, HEADER_SIZE + fdStat.st_size - counter, MSG_CONFIRM, addr, addr_len);
+		}
+		counter += MAX_PAYLOAD_SIZE;
+		printClientMessage("SEND", client_seq_no, client_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);	
+	}
+	cerr << bytesRead << " bytes read from file" << endl;
 
+	// TODO: TO CHECK IF ALL BYTES OF THE FILE HAVE BEEN ACK'D, MAYBE READ THE ENTIRE FILE INTO A BUFFER,
+	// GET LENGTH OF FILE, THEN COMPARE LENGTH TO SERVER ACK NO - INITIAL CLIENT SEQ
+	// ONCE LENGTH == SERVER ACK NO - INITIAL CLIENT SEQ, THEN START TEARDOWN WITH FIN
+
+	// TODO: the send process and receive process can be put in their own functions
+
+	// 								HEADER_SIZE + payload
+	//cerr << "Total bytes sent: " << length << endl;
+
+	memset(buf, '\0', HEADER_SIZE);	
+	memset(flags, '\0', NUM_FLAGS);
+
+	length = recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
+	
+	processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
+
+	cerr << "Total bytes received: " << length << endl;
+	printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
+
+	// sendto(serverSockFd, fileBuffer, bytesRead, MSG_CONFIRM, serverSockAddr, serverSockAddrLength);
 	// struct sockaddr addr;
 	// socklen_t addr_len = sizeof(struct sockaddr);
 	// memset(fileBuffer, 0, sizeof(fileBuffer));
 	// ssize_t length = recvfrom(serverSockFd, fileBuffer, fdStat.st_size, 0, &addr, &addr_len);
 
-	// string str((char*)fileBuffer);
-	// cerr << "ACK received " << length << " bytes: " << endl << str << endl;
-	// close(fileToTransferFd);
-	// exit(0);
+	close(filefd);
+	exit(0);
 }
 

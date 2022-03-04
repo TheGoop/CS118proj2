@@ -20,29 +20,33 @@ Server: "SEND" <Sequence Number> <Acknowledgement Number> <Connection ID> ["ACK"
 #include <unistd.h>
 #include <csignal>
 #include <math.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "utils.h"
 #include "constants.h"
 
 void runError(int code);
 void endProgram();
-void makeConnection(std::string direc);
+void makeConnection(char*  direc, u_int16_t currID);
 void makeSocket(char *port);
 void signalHandler(int signum);
 
 // pointer to our file writers for each connection
-std::vector<std::ofstream *> connections;
+std::vector<std::ofstream*> connections;
 
 int sock;
 // address
 struct sockaddr_in servaddr;
+
+ssize_t blength = 0;
 
 int main(int argc, char **argv)
 {
     char *port;
 
     // directory to store files
-    std::string direc;
+    char* direc;
 
     // ints for handling headers
     uint32_t currSeq = INITIAL_SERVER_SEQ;
@@ -63,7 +67,6 @@ int main(int argc, char **argv)
     // // 4097
     // // 010
     // processHeader(test, currSeq, currAck, currID, flags);
-
     if (argc != 3)
     {
         runError(1);
@@ -71,7 +74,6 @@ int main(int argc, char **argv)
 
     // reads port, tries to catch invalid port numbers
     // only catches port numbers that are not numbers
-    // TODO find other invalid port numbers?
     try
     {
         port = argv[1];
@@ -81,14 +83,13 @@ int main(int argc, char **argv)
         runError(2);
     }
 
-    direc = argv[2];
-    std::cerr << argv[1] << std::endl
-              << argv[2] << std::endl;
-
+    direc = argv[2];    
     makeSocket(port);
 
     signal(SIGQUIT, signalHandler);
-
+    signal(SIGINT, signalHandler);
+    signal(SIGTERM, signalHandler);
+    
     while (1)
     {
         unsigned char recieved_payload[MAX_PAYLOAD_SIZE];
@@ -97,9 +98,9 @@ int main(int argc, char **argv)
         struct sockaddr addr;
         socklen_t addr_len = sizeof(struct sockaddr);
 
-        // recieve packet from Client
-        ssize_t length = recvfrom(sock, recieved_msg, MAX_SIZE, 0, &addr, &addr_len);
-        std::cerr << "DATA received " << length << " bytes from: " << inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr) << std::endl;
+        // recieve packet from client
+        blength += recvfrom(sock, recieved_msg, MAX_SIZE, 0, &addr, &addr_len);
+        ssize_t length = 0;
 
         processHeader(recieved_msg, currSeq, currAck, currID, flags);
         printServerMessage("RECV", currSeq, currAck, currID, flags);
@@ -109,44 +110,42 @@ int main(int argc, char **argv)
         {
             // printf("SYN RECIEVED\n");
             // Allocate a file writer for this new client
-            makeConnection(direc);
+            totalConnections = incrementConnections(totalConnections, 1);
+            currID = totalConnections;
+            makeConnection(direc, currID);
             unsigned char msg[HEADER_SIZE] = "";
             currAck = incrementSeq(currSeq, 1);
             currSeq = INITIAL_SERVER_SEQ;
-            totalConnections = incrementConnections(totalConnections, 1);
-            currID = totalConnections;
             createHeader(msg, currSeq, currAck, currID, SYN_ACK, flags);
 
             length = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
             printServerMessage("SEND", currSeq, currAck, currID, flags);
 
-            std::cout << length << " bytes sent" << std::endl;
+            std::cout << "Total bytes sent: " << length << std::endl;
         }
 
-        // if its a normal packet - NO SYN/ACK/SYN-ACK/FIN/FIN-ACK
-        else if (!flags[0] && !flags[1] && !flags[2])
+        // if its a normal packet - NO SYN or FIN
+        else if (!flags[1] && !flags[2])
         {
             // printf("DATA PAYLOAD PACKET RECIEVED\n");
 
             // check to see if this connection ID is valid and not already terminated
-            if (currID < connections.size() && connections[currID - 1] != NULL)
+            if (currID <= connections.size() && connections[currID - 1] != NULL)
             {
                 // write to connections[currID - 1]
                 processPayload(recieved_msg, recieved_payload);
-                *connections[currID - 1] << recieved_payload;
+                *connections[currID-1] << recieved_payload;
 
                 // create ACK to send back to client
-                unsigned char msg[HEADER_SIZE] = "";
+                unsigned char msg[HEADER_SIZE];
+                int previous_seq = currSeq;
                 currSeq = currAck;
-                currAck = incrementAck(currSeq, sizeof(recieved_payload));
-                flags[0] = true;
-                flags[1] = false;
-                flags[2] = false;
+                currAck = incrementAck(previous_seq, length - HEADER_SIZE);
                 createHeader(msg, currSeq, currAck, currID, ACK, flags);
 
                 length = sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
                 printServerMessage("SEND", currSeq, currAck, currID, flags);
-                std::cout << length << " bytes sent" << std::endl;
+                std::cout << "Total bytes sent: " << length << std::endl;
             }
             else
             {
@@ -155,12 +154,6 @@ int main(int argc, char **argv)
             }
         }
         memset(flags, '\0', NUM_FLAGS);
-
-        // unsigned char head[HEADER_SIZE];
-        // createHeader(head, INITIAL_SERVER_SEQ, currSeq + 1, currID, SYN_ACK);
-        // processHeader(recieved_msg, currSeq, currAck, currID, flags);
-        // length = sendto(sock, head, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
-        // std::cout << length << " bytes ACK sent" << std::endl;
     }
 
     endProgram();
@@ -201,6 +194,7 @@ void makeSocket(char *port)
 // should always be run before any exits
 void endProgram()
 {
+    std::cerr << "Total bytes received: " << blength << std::endl;
     for (size_t x = 0; x < connections.size(); x++)
     {
         (*connections[x]).close();
@@ -214,11 +208,16 @@ void endProgram()
     first client's file writer -> connections[0]
     second client's file writer -> connections[1]
 */
-void makeConnection(std::string direc)
+void makeConnection(char* direc, u_int16_t currID)
 {
-    connections.push_back(new std::ofstream(direc + "/" +
-                                                std::to_string(connections.size() + 1) + ".file",
-                                            std::ios::app));
+    char path[128];
+    if (direc[0] == '/'){
+        direc++;
+    }
+    sprintf(path, "%s/%u.file", direc, currID);
+    // std::cerr << path << std::endl;
+    std::ofstream* out = new std::ofstream(path);
+    connections.push_back(out);
 }
 
 // simple error function
