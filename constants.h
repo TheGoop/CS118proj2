@@ -1,11 +1,13 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
-const int MAX_PAYLOAD = 512;
+#include <stdint.h>
+
+const int MAX_PAYLOAD_SIZE = 512;
 const int HEADER_SIZE = 12;
-const int MAX_SIZE = 524;
+const int MAX_PACKET_SIZE = 524;
 const int MAX_SEQ_NO = 102400;
-const int RETRANS_TIMEOUT = 0.5;
+const double RETRANS_TIMEOUT = 0.5;
 const int INITIAL_CWND = 512;
 const int MAX_CWND = 51200;
 const int RWND = 51200;
