@@ -274,11 +274,28 @@ void endProgram()
 void makeConnection(char *direc, u_int16_t currID)
 {
     char path[128];
-    if (direc[0] == '/')
-    {
-        direc++;
-    }
-    sprintf(path, "%s/%u.file", direc, currID);
+    // if (direc[0] == '/')
+    // {
+    //     direc++;
+    // }
+    // sprintf(path, "%s/%u.file", direc, currID);
+    // // std::cerr << path << std::endl;
+    // std::ofstream *out = new std::ofstream(path);
+    // connections.push_back(out);
+    // char path[128];
+    // std::string dir = direc;
+    // if (dir.back() == '/')
+    //     sprintf(path, "%s%u.file", direc, currID);
+    // else
+    //     sprintf(path, "%s/%u.file", direc, currID);
+    sprintf(path, "%s%u.file", direc, currID);
+
+    // if (direc[0] != '/')
+    // {
+    //     sprintf(path, "%s/%u.file", direc, currID);
+    // }
+    // else
+    //     sprintf(path, "%s/%u.file", direc, currID);
     // std::cerr << path << std::endl;
     std::ofstream *out = new std::ofstream(path);
     connections.push_back(out);
