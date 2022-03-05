@@ -39,7 +39,7 @@ void handshake(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 	unsigned char buf[HEADER_SIZE];
 	createHeader(buf, client_seq_no, client_ack_no, connection_id, SYN, flags);
 
-	int length = sendto(sockfd, buf, HEADER_SIZE, MSG_CONFIRM, addr, addr_len);
+	sendto(sockfd, buf, HEADER_SIZE, MSG_CONFIRM, addr, addr_len);
 
 	// cerr << "Total bytes sent: " << length << endl;
 	printClientMessage("SEND", client_seq_no, client_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
@@ -48,7 +48,7 @@ void handshake(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 	memset(buf, '\0', HEADER_SIZE);
 	memset(flags, '\0', NUM_FLAGS);
 
-	length = recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
+	recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 
 	processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
 
@@ -73,7 +73,7 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 	unsigned char buf[HEADER_SIZE];
 	createHeader(buf, client_seq_no, 0, connection_id, FIN, flags);
 
-	int length = sendto(sockfd, buf, HEADER_SIZE, MSG_CONFIRM, addr, addr_len);
+	sendto(sockfd, buf, HEADER_SIZE, MSG_CONFIRM, addr, addr_len);
 
 	// cerr << "Total bytes sent: " << length << endl;
 	printClientMessage("SEND", client_seq_no, 0, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
@@ -81,7 +81,7 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 	memset(buf, '\0', HEADER_SIZE);
 	memset(flags, '\0', NUM_FLAGS);
 
-	length = recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
+	recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 
 	processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
 
@@ -89,7 +89,7 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 	printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
 
 	client_seq_no = server_ack_no;
-	
+
 	timer_t timerid;
 	struct sigevent sev;
 	struct itimerspec its;
@@ -119,7 +119,7 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 		exit(1);
 	}
 
-	length = recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
+	recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 
 	processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
 
@@ -132,13 +132,14 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 	client_ack_no = incrementSeq(server_seq_no, 1);
 	createHeader(buf, client_seq_no, client_ack_no, connection_id, ACK, flags);
 
-	length = sendto(sockfd, buf, HEADER_SIZE, MSG_CONFIRM, addr, addr_len);
+	sendto(sockfd, buf, HEADER_SIZE, MSG_CONFIRM, addr, addr_len);
 
 	// cerr << "Total bytes sent: " << length << endl;
 	printClientMessage("SEND", client_seq_no, client_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
 	// TODO: Handle retransmissions for FIN/ACK
 	// Code exits at timer handler
-	while(1);
+	while (1)
+		;
 }
 
 int main(int argc, char **argv)
@@ -231,7 +232,7 @@ int main(int argc, char **argv)
 
 	int length = sendto(sockfd, buf, HEADER_SIZE + bytesRead, MSG_CONFIRM, addr, addr_len);
 
-	cerr << "Total bytes sent: " << length << endl;
+	// cerr << "Total bytes sent: " << length << endl;
 	printClientMessage("SEND", client_seq_no, client_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
 
 	memset(buf, '\0', HEADER_SIZE);
@@ -265,7 +266,10 @@ int main(int argc, char **argv)
 		counter += bytesRead;
 		totalBytes -= bytesRead;
 		length = sendto(sockfd, buf, HEADER_SIZE + bytesRead, MSG_CONFIRM, addr, addr_len);
-		printClientMessage("SEND", client_seq_no, client_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
+		if (flags[0])
+			printClientMessage("SEND", client_seq_no, client_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
+		else	
+			printClientMessage("SEND", client_seq_no, 0, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
 
 		memset(buf, '\0', HEADER_SIZE);
 		memset(flags, '\0', NUM_FLAGS);
