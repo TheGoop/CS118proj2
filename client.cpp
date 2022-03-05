@@ -282,12 +282,12 @@ int main(int argc, char **argv)
 	}
 	cerr << counter << " bytes read from file" << endl;
 
-	if (fdStat.st_size != server_ack_no - INITIAL_CLIENT_SEQ - 1)
-	{
-		cerr << "Server has not successfully received all bytes" << endl;
-		exit(1);
-	}
-	cerr << "Sending FIN..." << endl;
+	// if (fdStat.st_size != server_ack_no - INITIAL_CLIENT_SEQ - 1)
+	// {
+	// 	cerr << "Server has not successfully received all bytes" << endl;
+	// 	exit(1);
+	// }
+	// cerr << "Sending FIN..." << endl;
 	close(filefd);
 
 	client_seq_no = server_ack_no;
