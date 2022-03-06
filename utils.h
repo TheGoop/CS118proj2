@@ -7,6 +7,9 @@
 
 void createHeader(unsigned char *head, uint32_t seq, uint32_t ack, uint16_t conn_id, uint8_t flag_byte, bool *flags)
 { // seq = 5, ack = 9
+    if (flag_byte == 0){
+        ack = 0;
+    }
     head[0] = (seq >> 24) & 0Xff;
     head[1] = (seq >> 16) & 0Xff;
     head[2] = (seq >> 8) & 0Xff;
