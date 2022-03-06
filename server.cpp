@@ -56,17 +56,7 @@ int main(int argc, char **argv)
 
     // index 0 is ack, 1 is syn, 2 is fin
     bool flags[3];
-
-    // char test[] = {
-    //     0x00, 0x00, 0x08, 0x52,
-    //     0x00, 0x00, 0x15, 0x32,
-    //     0x10, 0x01, 0x00, 0x02};
-    // // Expected Output:
-    // // 2130
-    // // 5426
-    // // 4097
-    // // 010
-    // processHeader(test, currServerSeq, currServerAck, currID, flags);
+    
     if (argc != 3)
     {
         runError(1);
@@ -259,29 +249,7 @@ void endProgram()
 void makeConnection(char *direc, u_int16_t currID)
 {
     char path[128];
-    // if (direc[0] == '/')
-    // {
-    //     direc++;
-    // }
-    // sprintf(path, "%s/%u.file", direc, currID);
-    // // std::cerr << path << std::endl;
-    // std::ofstream *out = new std::ofstream(path);
-    // connections.push_back(out);
-    // char path[128];
-    // std::string dir = direc;
-    // if (dir.back() == '/')
-    //     sprintf(path, "%s%u.file", direc, currID);
-    // else
-    //     sprintf(path, "%s/%u.file", direc, currID);
     sprintf(path, "%s%u.file", direc, currID);
-
-    // if (direc[0] != '/')
-    // {
-    //     sprintf(path, "%s/%u.file", direc, currID);
-    // }
-    // else
-    //     sprintf(path, "%s/%u.file", direc, currID);
-    // std::cerr << path << std::endl;
     std::ofstream *out = new std::ofstream(path);
     connections.push_back(out);
 }

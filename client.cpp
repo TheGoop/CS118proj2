@@ -114,7 +114,6 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 		if (server_ack_no)
 			client_seq_no = server_ack_no;
 		if (!isTimerSet){
-			cerr << "Timer start" << endl;
 			if (timer_settime(timerid, 0, &its, NULL) == -1)
 			{
 				cerr << "ERROR: Timer set error" << endl;
@@ -158,27 +157,6 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 		}
 
 	}
-	// recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
-
-	// processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
-
-	// // cerr << "Total bytes received: " << length << endl;
-	// printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
-
-	// memset(flags, '\0', NUM_FLAGS);
-	// memset(buf, '\0', HEADER_SIZE);
-
-	// client_ack_no = incrementSeq(server_seq_no, 1);
-	// createHeader(buf, client_seq_no, client_ack_no, connection_id, ACK, flags);
-
-	// sendto(sockfd, buf, HEADER_SIZE, MSG_CONFIRM, addr, addr_len);
-
-	// // cerr << "Total bytes sent: " << length << endl;
-	// printClientMessage("SEND", client_seq_no, client_ack_no, connection_id, INITIAL_CWND, INITIAL_SSTHRESH, flags);
-	// // TODO: Handle retransmissions for FIN/ACK
-	// // Code exits at timer handler
-	// while (1)
-	// 	;
 }
 
 int main(int argc, char **argv)
@@ -321,12 +299,6 @@ int main(int argc, char **argv)
 	}
 	// cerr << counter << " bytes read from file" << endl;
 
-	// if (fdStat.st_size != server_ack_no - INITIAL_CLIENT_SEQ - 1)
-	// {
-	// 	cerr << "Server has not successfully received all bytes" << endl;
-	// 	exit(1);
-	// }
-	// cerr << "Sending FIN..." << endl;
 	close(filefd);
 
 	client_seq_no = server_ack_no;
