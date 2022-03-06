@@ -177,45 +177,33 @@ int main(int argc, char **argv)
         // FIN stuff
         else if (flags[2])
         {
-            memset(flags, '\0', NUM_FLAGS);
-            // create ACK to send back to client
-            unsigned char msg[HEADER_SIZE];
-            currServerAck = incrementSeq(currClientSeq, 1);
-            createHeader(msg, currServerSeq, currServerAck, currID, ACK, flags);
+            while(1){
+                memset(flags, '\0', NUM_FLAGS);
+                // create FIN_ACK to send back to client
+                unsigned char msg[HEADER_SIZE];
+                currServerAck = incrementSeq(currClientSeq, 1);
+                createHeader(msg, currServerSeq, currServerAck, currID, FIN_ACK, flags);
 
-            sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
-            printServerMessage("SEND", currServerSeq, currServerAck, currID, flags);
-            // std::cerr << "Total bytes sent: " << bytes_sent << std::endl;
+                sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
+                printServerMessage("SEND", currServerSeq, currServerAck, currID, flags);
+                // std::cerr << "Total bytes sent: " << bytes_sent << std::endl;
 
-            fin = true;
-            memset(flags, '\0', NUM_FLAGS);
+                memset(flags, '\0', NUM_FLAGS);
+                memset(msg, '\0', HEADER_SIZE);
+                recvfrom(sock, msg, HEADER_SIZE, 0, &addr, &addr_len);
 
-            // Send FIN: the client will respond with ACK for 2 seconds (if its ACK is lost)
-            // Close connection when server correctly receives ACK
-            // TODO: send another FIN if client ACK is lost
+                processHeader(msg, currClientSeq, currClientAck, currID, flags);
+                printServerMessage("RECV", currClientSeq, currClientAck, currID, flags);
 
-            memset(msg, '\0', HEADER_SIZE);
-            currServerAck = 0;
-            createHeader(msg, currServerSeq, currServerAck, currID, FIN, flags);
-
-            sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
-            printServerMessage("SEND", currServerSeq, currServerAck, currID, flags);
-            // std::cerr << "Total bytes sent: " << length << std::endl;
-
-            memset(msg, '\0', HEADER_SIZE);
-
-            recvfrom(sock, msg, HEADER_SIZE, 0, &addr, &addr_len);
-
-            processHeader(msg, currClientSeq, currClientAck, currID, flags);
-            printServerMessage("RECV", currClientSeq, currClientAck, currID, flags);
-
-            // If properly receive ACK from client for server FIN, close connection
-            if (flags[0] && currClientAck == incrementSeq(currServerSeq, 1) && fin)
-            {
-                std::cerr << "Connection " << currID << " closing..." << std::endl;
-                (*connections[currID - 1]).close();
-                currServerAck = 0;
-                currServerSeq = INITIAL_SERVER_SEQ;
+                // If properly receive ACK from client for server FIN, close connection
+                if (flags[0])
+                {
+                    std::cerr << "Connection " << currID << " closing..." << std::endl;
+                    (*connections[currID - 1]).close();
+                    currServerAck = 0;
+                    currServerSeq = INITIAL_SERVER_SEQ;
+                    break;
+                }
             }
         }
         memset(flags, '\0', NUM_FLAGS);
@@ -274,11 +262,28 @@ void endProgram()
 void makeConnection(char *direc, u_int16_t currID)
 {
     char path[128];
-    if (direc[0] == '/')
-    {
-        direc++;
-    }
-    sprintf(path, "%s/%u.file", direc, currID);
+    // if (direc[0] == '/')
+    // {
+    //     direc++;
+    // }
+    // sprintf(path, "%s/%u.file", direc, currID);
+    // // std::cerr << path << std::endl;
+    // std::ofstream *out = new std::ofstream(path);
+    // connections.push_back(out);
+    // char path[128];
+    // std::string dir = direc;
+    // if (dir.back() == '/')
+    //     sprintf(path, "%s%u.file", direc, currID);
+    // else
+    //     sprintf(path, "%s/%u.file", direc, currID);
+    sprintf(path, "%s%u.file", direc, currID);
+
+    // if (direc[0] != '/')
+    // {
+    //     sprintf(path, "%s/%u.file", direc, currID);
+    // }
+    // else
+    //     sprintf(path, "%s/%u.file", direc, currID);
     // std::cerr << path << std::endl;
     std::ofstream *out = new std::ofstream(path);
     connections.push_back(out);
