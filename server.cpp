@@ -249,7 +249,7 @@ void endProgram()
 void makeConnection(char *direc, u_int16_t currID)
 {
     char path[128];
-    sprintf(path, "%s%u.file", direc, currID);
+    sprintf(path, "%s/%u.file", direc, currID);
     std::ofstream *out = new std::ofstream(path);
     connections.push_back(out);
 }
