@@ -31,43 +31,10 @@ Client: "RECV" <Sequence Number> <Acknowledgement Number> <Connection ID> <CWND>
 
 using namespace std;
 
-int filefd;
-
-// This is called after 10 seconds of nothing being received
-void outoftime(union sigval val)
-{
-	// cerr << "10 seconds exceeded" << endl;
-	// if (filefd != NULL) 
-	close(filefd);
-	exit(1);
-}
-
 void handshake(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 			   uint32_t &server_seq_no, uint32_t &server_ack_no, uint16_t &connection_id,
 			   uint32_t &client_seq_no, uint32_t &client_ack_no, bool *flags, int cwnd)
 {
-	timer_t timerid;
-	struct sigevent sev;
-	struct itimerspec its;
-	/* Create the timer */
-	// 3 elements: ID, timeout value, callback
-	union sigval arg;
-	arg.sival_int = 54322;
-	sev.sigev_notify = SIGEV_THREAD;
-	sev.sigev_notify_function = outoftime;
-	sev.sigev_notify_attributes = NULL;
-	sev.sigev_value = arg;
-	if (timer_create(CLOCK_MONOTONIC, &sev, &timerid) == -1)
-	{
-		cerr << "ERROR: Timer create error" << endl;
-		exit(1);
-	}
-	/* Start the timer */
-	its.it_value.tv_sec = 10;
-	its.it_value.tv_nsec = 0;
-	its.it_interval.tv_sec = 0;
-	its.it_interval.tv_nsec = 0;
-	
 	memset(flags, '\0', NUM_FLAGS);
 	// send syn
 	unsigned char buf[HEADER_SIZE];
@@ -81,14 +48,6 @@ void handshake(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 	// receive syn-ack
 	memset(buf, '\0', HEADER_SIZE);
 	memset(flags, '\0', NUM_FLAGS);
-
-	// Timer that counts to 10 seconds
-	if (timer_settime(timerid, 0, &its, NULL) == -1)
-	{
-		cerr << "ERROR: Timer set error" << endl;
-		// close(filefd);
-		exit(1);
-	}
 
 	recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 
@@ -158,13 +117,6 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 		if (server_ack_no)
 		{
 			client_seq_no = server_ack_no;
-		}
-
-		// cerr << "Timer start" << endl;
-		if (timer_settime(timerid, 0, &its, NULL) == -1)
-		{
-			cerr << "ERROR: Timer set error" << endl;
-			exit(1);
 		}
 
 		// cerr << "Timer start" << endl;
@@ -295,7 +247,7 @@ int main(int argc, char **argv)
 
 	createHeader(buf, client_seq_no, client_ack_no, connection_id, ACK, flags);
 	// open file to transfer from client to server
-	filefd = open(fileName, O_RDONLY);
+	int filefd = open(fileName, O_RDONLY);
 	if (filefd == -1)
 	{
 		cerr << "ERROR: unable to open file" << endl;
@@ -313,9 +265,6 @@ int main(int argc, char **argv)
 	{
 		bytesRead = read(filefd, buf + HEADER_SIZE, totalBytes);
 	}
-
-	// Test 10-sec timeout on server-side
-	// sleep(11);
 
 	totalBytes -= bytesRead;
 	counter += bytesRead;
@@ -335,29 +284,6 @@ int main(int argc, char **argv)
 	// cerr << "Total bytes received: " << length << endl;
 	printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, cwnd, INITIAL_SSTHRESH, flags);
 	cwnd += 512;
-
-	timer_t timerid;
-	struct sigevent sev;
-	struct itimerspec its;
-	/* Create the timer */
-	// 3 elements: ID, timeout value, callback
-	union sigval arg;
-	arg.sival_int = 54323;
-	sev.sigev_notify = SIGEV_THREAD;
-	sev.sigev_notify_function = outoftime;
-	sev.sigev_notify_attributes = NULL;
-	sev.sigev_value = arg;
-	if (timer_create(CLOCK_MONOTONIC, &sev, &timerid) == -1)
-	{
-		cerr << "ERROR: Timer create error" << endl;
-		exit(1);
-	}
-	/* Start the timer */
-	its.it_value.tv_sec = 10;
-	its.it_value.tv_nsec = 0;
-	its.it_interval.tv_sec = 0;
-	its.it_interval.tv_nsec = 0;
-
 	while (totalBytes > 0)
 	{
 		memset(buf, '\0', HEADER_SIZE);
@@ -394,14 +320,6 @@ int main(int argc, char **argv)
 				else
 				{
 					printClientMessage("SEND", client_seq_no, 0, connection_id, cwnd, INITIAL_SSTHRESH, flags);
-				}
-
-				// Timer that counts to 10 seconds
-				if (timer_settime(timerid, 0, &its, NULL) == -1)
-				{
-					cerr << "ERROR: Timer set error" << endl;
-					close(filefd);
-					exit(1);
 				}
 
 				memset(buf, '\0', HEADER_SIZE);
