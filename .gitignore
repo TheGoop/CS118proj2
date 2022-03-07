@@ -4,3 +4,10 @@
 server
 client
 .vscode
+file.txt
+received.data
+retrans_client.cpp
+test
+*.txt
+*.jpg
+testfile
