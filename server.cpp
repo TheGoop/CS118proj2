@@ -166,6 +166,12 @@ int main(int argc, char **argv)
         processHeader(recieved_msg, currClientSeq, currClientAck, currID, flags);
         printServerMessage("RECV", currClientSeq, currClientAck, currID, flags);
 
+        // Test RTT on client side
+        // if (currClientSeq == 12858)
+        // {
+        //     sleep(1);
+        // }
+
         // Timer that counts to 10 seconds
         if (timer_settime(timerid, 0, &its, NULL) == -1)
         {
@@ -263,11 +269,12 @@ int main(int argc, char **argv)
 
                 /* Create the timer for FIN_ACK's ACK */
                 // 3 elements: ID, timeout value, callback
+	            timer_t timeridfin;
                 sev.sigev_notify = SIGEV_THREAD;
                 sev.sigev_notify_function = FIN_ACK_outoftime;
                 sev.sigev_notify_attributes = NULL;
                 sev.sigev_value = arg;
-                if (timer_create(CLOCK_MONOTONIC, &sev, &timerid) == -1)
+                if (timer_create(CLOCK_MONOTONIC, &sev, &timeridfin) == -1)
                 {
                     std::cerr << "ERROR: Timer create error" << std::endl;
                     exit(1);
@@ -293,7 +300,7 @@ int main(int argc, char **argv)
                 }
 
                 // FIN_ACK timer that counts to 2 seconds
-                if (timer_settime(timerid, 0, &its, NULL) == -1)
+                if (timer_settime(timeridfin, 0, &its, NULL) == -1)
                 {
                     std::cerr << "ERROR: Timer set error" << std::endl;
                     endProgram();
@@ -307,11 +314,23 @@ int main(int argc, char **argv)
                 // If properly receive ACK from client for server FIN, close connection
                 if (flags[0])
                 {
-                    // Disarm the timer since we got the ACK
+                    // Disarm the timers since we got the ACK
                     its = {{0, 0}, {0, 0}};
                     if (timer_settime(rttid, 0, &its, NULL) == -1)
                     {
                         std::cerr << "ERROR: RTT disarm error" << std::endl;
+                        endProgram();
+                        exit(1);
+                    }
+                    if (timer_settime(timerid, 0, &its, NULL) == -1)
+                    {
+                        std::cerr << "ERROR: 10-sec disarm error" << std::endl;
+                        endProgram();
+                        exit(1);
+                    }
+                    if (timer_settime(timeridfin, 0, &its, NULL) == -1)
+                    {
+                        std::cerr << "ERROR: 2-sec disarm error" << std::endl;
                         endProgram();
                         exit(1);
                     }
