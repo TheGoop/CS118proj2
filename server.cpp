@@ -39,9 +39,11 @@ int sock;
 // address
 struct sockaddr_in servaddr;
 
+long totalBytes = 0;
+
 int main(int argc, char **argv)
 {
-    //for out of order writing
+    // for out of order writing
     int rollovers = 0;
 
     char *port;
@@ -141,7 +143,7 @@ int main(int argc, char **argv)
             // check to see if this connection ID is valid and not already terminated
             if (currID <= connections.size() && connections[currID - 1] != NULL)
             {
-                //set the connections pointer to the correct position
+                // set the connections pointer to the correct position
                 connections[currID - 1]->seekp((currClientSeq + (rollovers * (MAX_SEQ_NO + 1))) - 12346);
 
                 // write to connections[currID - 1]
@@ -149,6 +151,7 @@ int main(int argc, char **argv)
                 {
                     *connections[currID - 1] << recieved_msg[i];
                 }
+                totalBytes += bytes_recieved - 12;
 
                 // create ACK to send back to client
                 unsigned char msg[HEADER_SIZE];
@@ -157,7 +160,8 @@ int main(int argc, char **argv)
 
                 uint32_t temVar = currClientSeq;
                 currServerAck = incrementAck(currClientSeq, bytes_recieved - HEADER_SIZE);
-                if (temVar > currServerAck) rollovers++;
+                if (temVar > currServerAck)
+                    rollovers++;
 
                 createHeader(msg, currServerSeq, currServerAck, currID, ACK, flags);
 
@@ -243,6 +247,7 @@ void makeSocket(char *port)
 // should always be run before any exits
 void endProgram()
 {
+    std::cout << "Total Bytes: " << totalBytes << std::endl;
     for (size_t x = 0; x < connections.size(); x++)
     {
         (*connections[x]).close();

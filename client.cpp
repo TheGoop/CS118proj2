@@ -284,14 +284,16 @@ int main(int argc, char **argv)
 	// cerr << "Total bytes received: " << length << endl;
 	printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, cwnd, INITIAL_SSTHRESH, flags);
 	cwnd += 512;
+	client_seq_no += bytesRead;
 	while (totalBytes > 0)
 	{
 		memset(buf, '\0', HEADER_SIZE);
 		memset(flags, '\0', NUM_FLAGS);
 		if (awaited_acks.size() == 0)
 		{
-			client_seq_no = incrementSeq(server_ack_no, 0);
-			client_ack_no = incrementAck(server_seq_no, 1);
+			uint32_t temp_seq_no = client_seq_no;
+			client_seq_no = incrementSeq(client_seq_no, 0);
+			client_ack_no = incrementAck(temp_seq_no, 1);
 			for (int i = 0; i < cwnd; i += 512)
 			{
 				if (totalBytes <= 0)
@@ -338,14 +340,29 @@ int main(int argc, char **argv)
 			awaited_acks.erase(server_ack_no);
 			if (cwnd < ssthresh)
 			{
-				cwnd += 512;
+				if (cwnd + MAX_PAYLOAD_SIZE > MAX_CWND)
+				{
+					cwnd = MAX_CWND;
+				}
+				else
+				{
+					cwnd += MAX_PAYLOAD_SIZE;
+				}
 			}
 			else
 			{
-				cwnd += (512 * 512) / cwnd;
+
+				if (cwnd + MAX_PAYLOAD_SIZE > MAX_CWND)
+				{
+					cwnd = MAX_CWND;
+				}
+				else
+				{
+					cwnd += (MAX_PAYLOAD_SIZE * MAX_PAYLOAD_SIZE) / cwnd;
+				}
 			}
 		}
-		usleep(50000);
+		// usleep(50000);
 	}
 	// cerr << counter << " bytes read from file" << endl;
 
