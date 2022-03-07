@@ -58,7 +58,7 @@ void retransmit(union sigval val)
 	ssthresh = cwnd / 2;
 	cwnd = INITIAL_CWND;
 
-    // Do stuff to actually retransmit here. Maybe a dictionary or dynamic array that stores un-ACK'd packets?
+    // Do stuff to actually retransmit here. Maybe a variable that stores the last ACK'd byte?
 }
 
 void handshake(int sockfd, struct sockaddr *addr, socklen_t addr_len,
@@ -355,7 +355,7 @@ int main(int argc, char **argv)
 	itsrtt.it_value.tv_sec = 0;
 	itsrtt.it_value.tv_nsec = 500000000;
 	itsrtt.it_interval.tv_sec = 0;
-	itsrtt.it_interval.tv_nsec = 500000000;
+	itsrtt.it_interval.tv_nsec = 0;
 
 	// Also updates the seq_no, ack_no, conn_id
 	handshake(sockfd, addr, addr_len, server_seq_no, server_ack_no, connection_id, client_seq_no, client_ack_no, flags, cwnd);
