@@ -39,6 +39,39 @@ int sock;
 // address
 struct sockaddr_in servaddr;
 
+timer_t rttid;
+struct sigevent sevrtt;
+struct itimerspec itsrtt;
+
+// This is called after 10 seconds of nothing being received
+void outoftime(union sigval val)
+{
+    (*connections[val.sival_int]).close();
+	std::cerr << "ERROR: 10 seconds exceeded" << std::endl;
+}
+
+// This is called after 2 seconds when waiting for FIN_ACK's ACK with nothing being received
+void FIN_ACK_outoftime(union sigval val)
+{
+	std::cerr << "2 seconds exceeded. Stop retransmitting" << std::endl;
+
+    // Disarm the RTT since it's been 2 seconds
+    struct itimerspec its = {{0, 0}, {0, 0}};
+    if (timer_settime(rttid, 0, &its, NULL) == -1)
+    {
+        std::cerr << "ERROR: RTT disarm error" << std::endl;
+        endProgram();
+        exit(1);
+    }
+}
+
+void retransmit(union sigval val)
+{
+    std::cerr << "Retransmit packet with the server sequence number: " << val.sival_int << std::endl;
+
+    // Do stuff to actually retransmit here. Maybe a dictionary or dynamic array that stores un-ACK'd packets?
+}
+
 int main(int argc, char **argv)
 {
     char *port;
@@ -100,6 +133,27 @@ int main(int argc, char **argv)
     struct sockaddr addr;
     socklen_t addr_len = sizeof(struct sockaddr);
 
+	timer_t timerid;
+	struct sigevent sev;
+	struct itimerspec its;
+	/* Create the timer */
+	// 3 elements: ID, timeout value, callback
+	union sigval arg;
+	sev.sigev_notify = SIGEV_THREAD;
+	sev.sigev_notify_function = outoftime;
+	sev.sigev_notify_attributes = NULL;
+	sev.sigev_value = arg;
+	if (timer_create(CLOCK_MONOTONIC, &sev, &timerid) == -1)
+	{
+		std::cerr << "ERROR: Timer create error" << std::endl;
+		exit(1);
+	}
+	/* Start the timer */
+	its.it_value.tv_sec = 10;
+	its.it_value.tv_nsec = 0;
+	its.it_interval.tv_sec = 0;
+	its.it_interval.tv_nsec = 0;
+
     while (1)
     {
         unsigned char recieved_msg[MAX_PACKET_SIZE];
@@ -112,6 +166,20 @@ int main(int argc, char **argv)
         processHeader(recieved_msg, currClientSeq, currClientAck, currID, flags);
         printServerMessage("RECV", currClientSeq, currClientAck, currID, flags);
 
+        // Test RTT on client side
+        // if (currClientSeq == 12858)
+        // {
+        //     sleep(1);
+        // }
+
+        // Timer that counts to 10 seconds
+        if (timer_settime(timerid, 0, &its, NULL) == -1)
+        {
+            std::cerr << "ERROR: Timer set error" << std::endl;
+            endProgram();
+            exit(1);
+        }
+
         // if this is a SYN packet from client (Aka new client/new connection)
         if (flags[1] && !flags[0])
         {
@@ -123,6 +191,12 @@ int main(int argc, char **argv)
             unsigned char msg[HEADER_SIZE] = "";
             currServerAck = incrementSeq(currClientSeq, 1);
             createHeader(msg, currServerSeq, currServerAck, currID, SYN_ACK, flags);
+
+            // Set value for 10-sec timer so that it will close just this connection
+	        arg.sival_int = currID - 1;
+
+            // Test 10-sec timeout on client-side
+            // sleep(11);
 
             sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
             printServerMessage("SEND", currServerSeq, currServerAck, currID, flags);
@@ -174,11 +248,65 @@ int main(int argc, char **argv)
                 currServerAck = incrementSeq(currClientSeq, 1);
                 createHeader(msg, currServerSeq, currServerAck, currID, FIN_ACK, flags);
 
+                /* Create the RTT (0.5 sec) timer */
+                // 3 elements: ID, timeout value, callback
+                union sigval argrtt;
+                argrtt.sival_int = currServerSeq;
+                sevrtt.sigev_notify = SIGEV_THREAD;
+                sevrtt.sigev_notify_function = retransmit;
+                sevrtt.sigev_notify_attributes = NULL;
+                sevrtt.sigev_value = argrtt;
+                if (timer_create(CLOCK_MONOTONIC, &sevrtt, &rttid) == -1)
+                {
+                    std::cerr << "ERROR: Timer create error" << std::endl;
+                    exit(1);
+                }
+                /* Start the timer */
+                itsrtt.it_value.tv_sec = 0;
+                itsrtt.it_value.tv_nsec = 500000000;
+                itsrtt.it_interval.tv_sec = 0;
+                itsrtt.it_interval.tv_nsec = 500000000;
+
+                /* Create the timer for FIN_ACK's ACK */
+                // 3 elements: ID, timeout value, callback
+	            timer_t timeridfin;
+                sev.sigev_notify = SIGEV_THREAD;
+                sev.sigev_notify_function = FIN_ACK_outoftime;
+                sev.sigev_notify_attributes = NULL;
+                sev.sigev_value = arg;
+                if (timer_create(CLOCK_MONOTONIC, &sev, &timeridfin) == -1)
+                {
+                    std::cerr << "ERROR: Timer create error" << std::endl;
+                    exit(1);
+                }
+                /* Start the timer */
+                its.it_value.tv_sec = 2;
+                its.it_value.tv_nsec = 0;
+                its.it_interval.tv_sec = 0;
+                its.it_interval.tv_nsec = 0;
+
                 sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
                 printServerMessage("SEND", currServerSeq, currServerAck, currID, flags);
                 // std::cerr << "Total bytes sent: " << bytes_sent << std::endl;
                 memset(flags, '\0', NUM_FLAGS);
                 memset(msg, '\0', HEADER_SIZE);
+
+                // RTT timer that counts to 0.5 seconds. When it reaches that, it calls retransmit and passes in the packet's serverSeq
+                if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
+                {
+                    std::cerr << "ERROR: Timer set error" << std::endl;
+                    endProgram();
+                    exit(1);
+                }
+
+                // FIN_ACK timer that counts to 2 seconds
+                if (timer_settime(timeridfin, 0, &its, NULL) == -1)
+                {
+                    std::cerr << "ERROR: Timer set error" << std::endl;
+                    endProgram();
+                    exit(1);
+                }
+                
                 recvfrom(sock, msg, HEADER_SIZE, 0, &addr, &addr_len);
 
                 processHeader(msg, currClientSeq, currClientAck, currID, flags);
@@ -186,6 +314,27 @@ int main(int argc, char **argv)
                 // If properly receive ACK from client for server FIN, close connection
                 if (flags[0])
                 {
+                    // Disarm the timers since we got the ACK
+                    its = {{0, 0}, {0, 0}};
+                    if (timer_settime(rttid, 0, &its, NULL) == -1)
+                    {
+                        std::cerr << "ERROR: RTT disarm error" << std::endl;
+                        endProgram();
+                        exit(1);
+                    }
+                    if (timer_settime(timerid, 0, &its, NULL) == -1)
+                    {
+                        std::cerr << "ERROR: 10-sec disarm error" << std::endl;
+                        endProgram();
+                        exit(1);
+                    }
+                    if (timer_settime(timeridfin, 0, &its, NULL) == -1)
+                    {
+                        std::cerr << "ERROR: 2-sec disarm error" << std::endl;
+                        endProgram();
+                        exit(1);
+                    }
+
                     // std::cerr << "Connection " << currID << " closing..." << std::endl;
                     (*connections[currID - 1]).close();
                     currServerAck = 0;
