@@ -50,7 +50,8 @@ struct reTransObject
 	int sockfd;
 	sockaddr *addr;
 	socklen_t addr_len;
-	unsigned char buf[MAX_PACKET_SIZE];
+	unsigned char* buf;
+	int arraySize;
 };
 
 // This is called after 10 seconds of nothing being received
@@ -73,7 +74,7 @@ void retransmit(union sigval val)
 
 	lseek(filefd, *awaited_acks.begin(), SEEK_SET);
 
-	sendto(rts->sockfd, rts->buf, HEADER_SIZE + bytesRead, MSG_CONFIRM, rts->addr, rts->addr_len);
+	sendto(rts->sockfd, rts->buf, sizeof(rts->buf), MSG_CONFIRM, rts->addr, rts->addr_len);
 	bool flags[3] = {false, false, false};
 	// cerr << "Total bytes sent: " << length << endl;
 	printClientMessage("SEND", *awaited_acks.begin(), 0, connection_id, cwnd, ssthresh, flags);
