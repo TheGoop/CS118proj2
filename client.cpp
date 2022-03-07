@@ -34,6 +34,7 @@ using namespace std;
 int filefd;
 int ssthresh = INITIAL_SSTHRESH;
 int cwnd = INITIAL_CWND;
+uint16_t connection_id;
 
 struct itimerspec its2 = {{0, 0}, {0, 0}};
 
@@ -47,39 +48,41 @@ std::set<int> awaited_acks;
 struct reTransObject
 {
 	int sockfd;
-	sockaddr addr*;
+	sockaddr *addr;
 	socklen_t addr_len;
-	unsigned char* buf[MAX_PAYLOAD_SIZE]
+	unsigned char buf[MAX_PACKET_SIZE];
 };
 
 // This is called after 10 seconds of nothing being received
 void outoftime(union sigval val)
 {
 	// cerr << "10 seconds exceeded" << endl;
-	// if (filefd != NULL) 
+	// if (filefd != NULL)
 	close(filefd);
 	exit(1);
 }
 
 void retransmit(union sigval val)
 {
-    std::cerr << "Retransmit packet from latest ACK'd byte" << std::endl;
+	std::cerr << "Retransmit packet from latest ACK'd byte" << std::endl;
+	reTransObject *rts;
+	rts = static_cast<reTransObject *>(val.sival_ptr);
 
 	ssthresh = cwnd / 2;
 	cwnd = INITIAL_CWND;
 
 	lseek(filefd, *awaited_acks.begin(), SEEK_SET);
 
-	int length = sendto(sockfd, buf, HEADER_SIZE + bytesRead, MSG_CONFIRM, addr, addr_len);
-
+	sendto(rts->sockfd, rts->buf, HEADER_SIZE + bytesRead, MSG_CONFIRM, rts->addr, rts->addr_len);
+	bool flags[3] = {false, false, false};
 	// cerr << "Total bytes sent: " << length << endl;
 	printClientMessage("SEND", *awaited_acks.begin(), 0, connection_id, cwnd, ssthresh, flags);
-    // Do stuff to actually retransmit here. Maybe a variable that stores the last ACK'd byte?
+	// Do stuff to actually retransmit here. Maybe a variable that stores the last ACK'd byte?
 }
 
 void handshake(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 			   uint32_t &server_seq_no, uint32_t &server_ack_no, uint16_t &connection_id,
-			   uint32_t &client_seq_no, uint32_t &client_ack_no, bool *flags, int cwnd)
+			   uint32_t &client_seq_no, uint32_t &client_ack_no, bool *flags)
 {
 	timer_t timerid;
 	struct sigevent sev;
@@ -111,7 +114,7 @@ void handshake(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 	sendto(sockfd, buf, HEADER_SIZE, MSG_CONFIRM, addr, addr_len);
 
 	// cerr << "Total bytes sent: " << length << endl;
-	printClientMessage("SEND", client_seq_no, client_ack_no, connection_id, cwnd, INITIAL_SSTHRESH, flags);
+	printClientMessage("SEND", client_seq_no, client_ack_no, connection_id, cwnd, ssthresh, flags);
 
 	// receive syn-ack
 	memset(buf, '\0', HEADER_SIZE);
@@ -148,7 +151,7 @@ void handshake(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 	}
 
 	recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
-	
+
 	// disarm the timer
 	if (timer_settime(timerid, 0, &its2, NULL) == -1)
 	{
@@ -409,7 +412,7 @@ int main(int argc, char **argv)
 
 	uint32_t server_seq_no = INITIAL_SERVER_SEQ;
 	uint32_t server_ack_no = 0;
-	uint16_t connection_id = 0;
+	connection_id = 0;
 
 	uint32_t client_seq_no = INITIAL_CLIENT_SEQ;
 	uint32_t client_ack_no = 0;
@@ -435,7 +438,7 @@ int main(int argc, char **argv)
 	itsrtt.it_interval.tv_nsec = 0;
 
 	// Also updates the seq_no, ack_no, conn_id
-	handshake(sockfd, addr, addr_len, server_seq_no, server_ack_no, connection_id, client_seq_no, client_ack_no, flags, cwnd);
+	handshake(sockfd, addr, addr_len, server_seq_no, server_ack_no, connection_id, client_seq_no, client_ack_no, flags);
 
 	unsigned char buf[MAX_PACKET_SIZE];
 	memset(flags, '\0', NUM_FLAGS);
@@ -480,7 +483,7 @@ int main(int argc, char **argv)
 	retrans.sockfd = sockfd;
 	retrans.addr = addr;
 	retrans.addr_len = addr_len;
-	retrans.buf = buf;
+	memcpy(retrans.buf, buf, HEADER_SIZE + bytesRead);
 	argrtt.sival_ptr = &retrans;
 	sevrtt.sigev_value = argrtt;
 	if (timer_create(CLOCK_MONOTONIC, &sevrtt, &rttid) == -1)
@@ -592,7 +595,7 @@ int main(int argc, char **argv)
 		rts.sockfd = sockfd;
 		rts.addr = addr;
 		rts.addr_len = addr_len;
-		rts.buf = buf;
+		memcpy(retrans.buf, buf, HEADER_SIZE + bytesRead);
 		argrtt.sival_ptr = &rts;
 		sevrtt.sigev_value = argrtt;
 		if (timer_create(CLOCK_MONOTONIC, &sevrtt, &rttid) == -1)
@@ -608,7 +611,7 @@ int main(int argc, char **argv)
 			close(filefd);
 			exit(1);
 		}
-		
+
 		length = recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 
 		// Disarm RTT
@@ -651,7 +654,7 @@ int main(int argc, char **argv)
 		rts.sockfd = sockfd;
 		rts.addr = addr;
 		rts.addr_len = addr_len;
-		rts.buf = buf;
+		memcpy(retrans.buf, buf, HEADER_SIZE + bytesRead);
 		argrtt.sival_ptr = &rts;
 		sevrtt.sigev_value = argrtt;
 		if (timer_create(CLOCK_MONOTONIC, &sevrtt, &rttid) == -1)
