@@ -197,6 +197,9 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 			client_ack_no = incrementSeq(server_seq_no, 1);
 			createHeader(buf, client_seq_no, client_ack_no, connection_id, ACK, flags);
 
+			// Test RTT on server side waiting for last ACK
+			// sleep(3);
+
 			sendto(sockfd, buf, HEADER_SIZE, MSG_CONFIRM, addr, addr_len);
 
 			// cerr << "Total bytes sent: " << length << endl;
