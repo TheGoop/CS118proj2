@@ -97,6 +97,7 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 	its.it_value.tv_nsec = 0;
 	its.it_interval.tv_sec = 0;
 	its.it_interval.tv_nsec = 0;
+	bool isTimerSet = false;
 
 	// cerr << "Total bytes sent: " << length << endl;
 	printClientMessage("SEND", client_seq_no, 0, connection_id, cwnd, INITIAL_SSTHRESH, flags);
@@ -113,15 +114,21 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 		// Receive FIN-ACK or ACK
 		printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, cwnd, INITIAL_SSTHRESH, flags);
 
-		client_seq_no = server_ack_no;
-
-		// cerr << "Timer start" << endl;
-		if (timer_settime(timerid, 0, &its, NULL) == -1)
+		if (server_ack_no)
 		{
-			cerr << "ERROR: Timer set error" << endl;
-			exit(1);
+			client_seq_no = server_ack_no;
 		}
 
+		// cerr << "Timer start" << endl;
+		if (!isTimerSet)
+		{
+			if (timer_settime(timerid, 0, &its, NULL) == -1)
+			{
+				cerr << "ERROR: Timer set error" << endl;
+				exit(1);
+			}
+			isTimerSet = true;
+		}
 		// memset(buf, '\0', HEADER_SIZE);
 		// memset(flags, '\0', NUM_FLAGS);
 		// recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
@@ -153,19 +160,19 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 			// cerr << "Total bytes received: " << length << endl;
 			// Receive FIN-ACK or ACK
 			printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, cwnd, INITIAL_SSTHRESH, flags);
-			if (flags[2])
-			{
-				memset(flags, '\0', NUM_FLAGS);
-				memset(buf, '\0', HEADER_SIZE);
+		}
+		if (flags[2])
+		{
+			memset(flags, '\0', NUM_FLAGS);
+			memset(buf, '\0', HEADER_SIZE);
 
-				client_ack_no = incrementSeq(server_seq_no, 1);
-				createHeader(buf, client_seq_no, client_ack_no, connection_id, ACK, flags);
+			client_ack_no = incrementSeq(server_seq_no, 1);
+			createHeader(buf, client_seq_no, client_ack_no, connection_id, ACK, flags);
 
-				sendto(sockfd, buf, HEADER_SIZE, MSG_CONFIRM, addr, addr_len);
+			sendto(sockfd, buf, HEADER_SIZE, MSG_CONFIRM, addr, addr_len);
 
-				// cerr << "Total bytes sent: " << length << endl;
-				printClientMessage("SEND", client_seq_no, client_ack_no, connection_id, cwnd, INITIAL_SSTHRESH, flags);
-			}
+			// cerr << "Total bytes sent: " << length << endl;
+			printClientMessage("SEND", client_seq_no, client_ack_no, connection_id, cwnd, INITIAL_SSTHRESH, flags);
 		}
 	}
 }

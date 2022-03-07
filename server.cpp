@@ -57,16 +57,6 @@ int main(int argc, char **argv)
     // index 0 is ack, 1 is syn, 2 is fin
     bool flags[3];
 
-    // char test[] = {
-    //     0x00, 0x00, 0x08, 0x52,
-    //     0x00, 0x00, 0x15, 0x32,
-    //     0x10, 0x01, 0x00, 0x02};
-    // // Expected Output:
-    // // 2130
-    // // 5426
-    // // 4097
-    // // 010
-    // processHeader(test, currServerSeq, currServerAck, currID, flags);
     if (argc != 3)
     {
         runError(1);
@@ -107,7 +97,6 @@ int main(int argc, char **argv)
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
 
-    bool fin = false;
     struct sockaddr addr;
     socklen_t addr_len = sizeof(struct sockaddr);
 
@@ -177,7 +166,8 @@ int main(int argc, char **argv)
         // FIN stuff
         else if (flags[2])
         {
-            while(1){
+            while (1)
+            {
                 memset(flags, '\0', NUM_FLAGS);
                 // create FIN_ACK to send back to client
                 unsigned char msg[HEADER_SIZE];
@@ -187,18 +177,16 @@ int main(int argc, char **argv)
                 sendto(sock, msg, HEADER_SIZE, MSG_CONFIRM, &addr, addr_len);
                 printServerMessage("SEND", currServerSeq, currServerAck, currID, flags);
                 // std::cerr << "Total bytes sent: " << bytes_sent << std::endl;
-
                 memset(flags, '\0', NUM_FLAGS);
                 memset(msg, '\0', HEADER_SIZE);
                 recvfrom(sock, msg, HEADER_SIZE, 0, &addr, &addr_len);
 
                 processHeader(msg, currClientSeq, currClientAck, currID, flags);
                 printServerMessage("RECV", currClientSeq, currClientAck, currID, flags);
-
                 // If properly receive ACK from client for server FIN, close connection
                 if (flags[0])
                 {
-                    std::cerr << "Connection " << currID << " closing..." << std::endl;
+                    // std::cerr << "Connection " << currID << " closing..." << std::endl;
                     (*connections[currID - 1]).close();
                     currServerAck = 0;
                     currServerSeq = INITIAL_SERVER_SEQ;
@@ -262,29 +250,7 @@ void endProgram()
 void makeConnection(char *direc, u_int16_t currID)
 {
     char path[128];
-    // if (direc[0] == '/')
-    // {
-    //     direc++;
-    // }
-    // sprintf(path, "%s/%u.file", direc, currID);
-    // // std::cerr << path << std::endl;
-    // std::ofstream *out = new std::ofstream(path);
-    // connections.push_back(out);
-    // char path[128];
-    // std::string dir = direc;
-    // if (dir.back() == '/')
-    //     sprintf(path, "%s%u.file", direc, currID);
-    // else
-    //     sprintf(path, "%s/%u.file", direc, currID);
-    sprintf(path, "%s%u.file", direc, currID);
-
-    // if (direc[0] != '/')
-    // {
-    //     sprintf(path, "%s/%u.file", direc, currID);
-    // }
-    // else
-    //     sprintf(path, "%s/%u.file", direc, currID);
-    // std::cerr << path << std::endl;
+    sprintf(path, "%s/%u.file", direc, currID);
     std::ofstream *out = new std::ofstream(path);
     connections.push_back(out);
 }
