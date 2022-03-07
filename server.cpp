@@ -41,6 +41,9 @@ struct sockaddr_in servaddr;
 
 int main(int argc, char **argv)
 {
+    //for out of order writing
+    int rollovers = 0;
+
     char *port;
 
     // directory to store files
@@ -138,6 +141,9 @@ int main(int argc, char **argv)
             // check to see if this connection ID is valid and not already terminated
             if (currID <= connections.size() && connections[currID - 1] != NULL)
             {
+                //set the connections pointer to the correct position
+                connections[currID - 1]->seekp((currClientSeq + (rollovers * (MAX_SEQ_NO + 1))) - 12346);
+
                 // write to connections[currID - 1]
                 for (int i = HEADER_SIZE; i < bytes_recieved; i++)
                 {
@@ -148,7 +154,10 @@ int main(int argc, char **argv)
                 unsigned char msg[HEADER_SIZE];
                 // currServerSeq = currClientAck;
                 currServerSeq = 4322;
+
+                uint32_t temVar = currClientSeq;
                 currServerAck = incrementAck(currClientSeq, bytes_recieved - HEADER_SIZE);
+                if (temVar > currServerAck) rollovers++;
 
                 createHeader(msg, currServerSeq, currServerAck, currID, ACK, flags);
 
