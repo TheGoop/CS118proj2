@@ -7,7 +7,8 @@
 
 void createHeader(unsigned char *head, uint32_t seq, uint32_t ack, uint16_t conn_id, uint8_t flag_byte, bool *flags)
 { // seq = 5, ack = 9
-    if (flag_byte == 0){
+    if (flag_byte == 0)
+    {
         ack = 0;
     }
     head[0] = (seq >> 24) & 0Xff;
@@ -106,5 +107,18 @@ uint32_t incrementAck(uint32_t ack, uint32_t amount)
 uint16_t incrementConnections(uint16_t c_id, uint16_t amount)
 {
     return c_id + amount;
+}
+
+int incrementCwnd(int cwnd, int amount)
+{
+    if (cwnd + amount <= MAX_CWND)
+    {
+        cwnd = cwnd + amount;
+    }
+    else
+    {
+        cwnd = MAX_CWND;
+    }
+    return cwnd;
 }
 #endif
