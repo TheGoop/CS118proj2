@@ -179,12 +179,12 @@ void handshake(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 		// close(filefd);
 		exit(1);
 	}
-	// if (timer_settime(rttid, 0, &its2, NULL) == -1)
-	// {
-	// 	cerr << "ERROR: Timer set error" << endl;
-	// 	// close(filefd);
-	// 	exit(1);
-	// }
+	if (timer_settime(rttid, 0, &its2, NULL) == -1)
+	{
+		cerr << "ERROR: Timer set error" << endl;
+		// close(filefd);
+		exit(1);
+	}
 
 	processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
 
@@ -496,23 +496,23 @@ int main(int argc, char **argv)
 	// 	exit(1);
 	// }
 
-	// RTT timer that counts to 0.5 seconds. When it reaches that, it calls retransmit and passes in the packet's clientSeq
-	if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
-	{
-		std::cerr << "ERROR: Timer set error" << std::endl;
-		close(filefd);
-		exit(1);
-	}
+	// // RTT timer that counts to 0.5 seconds. When it reaches that, it calls retransmit and passes in the packet's clientSeq
+	// if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
+	// {
+	// 	std::cerr << "ERROR: Timer set error" << std::endl;
+	// 	close(filefd);
+	// 	exit(1);
+	// }
 
 	length = recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 
 	// Disarm RTT
-	// if (timer_settime(rttid, 0, &its2, NULL) == -1)
-	// {
-	// 	cerr << "ERROR: Timer set error" << endl;
-	// 	// close(filefd);
-	// 	exit(1);
-	// }
+	if (timer_settime(rttid, 0, &its2, NULL) == -1)
+	{
+		cerr << "ERROR: Timer set error" << endl;
+		// close(filefd);
+		exit(1);
+	}
 
 	processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
 
