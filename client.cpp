@@ -80,7 +80,7 @@ void retransmit(union sigval val)
 	int length = sendto(sentPackets[0].sockfd, sentPackets[0].buf, sentPackets[0].arraySize, MSG_CONFIRM, sentPackets[0].addr, sentPackets[0].addr_len);
 	bool flags[3] = {false, false, false};
 	// cerr << "Total bytes sent: " << length << endl;
-	printClientMessage("SEND", sentPackets[0].seq, 0, connection_id, cwnd, ssthresh, flags);
+	printClientMessage("SEND", sentPackets[0].seq, 0, connection_id, cwnd, ssthresh, flags, true);
 	// Do stuff to actually retransmit here. Maybe a variable that stores the last ACK'd byte?
 }
 
@@ -147,12 +147,12 @@ void handshake(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 	// }
 
 	// // RTT timer that counts to 0.5 seconds. When it reaches that, it calls retransmit and passes in the packet's clientSeq
-	// if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
-	// {
-	// 	std::cerr << "ERROR: Timer set error" << std::endl;
-	// 	close(filefd);
-	// 	exit(1);
-	// }
+	if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
+	{
+		std::cerr << "ERROR: Timer set error" << std::endl;
+		close(filefd);
+		exit(1);
+	}
 
 	recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 
@@ -653,7 +653,7 @@ int main(int argc, char **argv)
 				cwnd = incrementCwnd(cwnd, (MAX_PAYLOAD_SIZE * MAX_PAYLOAD_SIZE) / cwnd);
 			}
 		}
-		usleep(50000);
+		// usleep(50000);
 	}
 	// cerr << counter << " bytes read from file" << endl;
 

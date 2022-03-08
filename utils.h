@@ -82,7 +82,7 @@ void printServerMessage(std::string msg, u_int32_t currSeq, u_int32_t currAck, u
     std::cout << std::endl;
 }
 
-void printClientMessage(std::string msg, u_int32_t currSeq, u_int32_t currAck, u_int16_t connID, int cwnd, int ssthresh, bool *flags)
+void printClientMessage(std::string msg, u_int32_t currSeq, u_int32_t currAck, u_int16_t connID, int cwnd, int ssthresh, bool *flags, bool dup = false)
 {
     std::cout << msg << " " << currSeq << " " << currAck << " " << connID << " " << cwnd << " " << ssthresh;
     if (flags[0])
@@ -91,6 +91,8 @@ void printClientMessage(std::string msg, u_int32_t currSeq, u_int32_t currAck, u
         std::cout << " SYN";
     if (flags[2])
         std::cout << " FIN";
+    if (dup)
+        std::cout << " DUP";
     std::cout << std::endl;
 }
 
