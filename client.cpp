@@ -382,14 +382,14 @@ int main(int argc, char **argv)
 			awaited_acks.erase(server_ack_no);
 			if (cwnd < ssthresh)
 			{
-				cwnd += 512;
+				cwnd = incrementCwnd(cwnd, MAX_PAYLOAD_SIZE);
 			}
 			else
 			{
-				cwnd += (512 * 512) / cwnd;
+				cwnd = incrementCwnd(cwnd, (MAX_PAYLOAD_SIZE * MAX_PAYLOAD_SIZE) / cwnd);
 			}
 		}
-		usleep(50000);
+		// usleep(50000);
 	}
 	while (awaited_acks.size() != 0)
 	{
@@ -400,11 +400,11 @@ int main(int argc, char **argv)
 		awaited_acks.erase(server_ack_no);
 		if (cwnd < ssthresh)
 		{
-			cwnd += 512;
+			cwnd = incrementCwnd(cwnd, MAX_PAYLOAD_SIZE);
 		}
 		else
 		{
-			cwnd += (512 * 512) / cwnd;
+			cwnd = incrementCwnd(cwnd, (MAX_PAYLOAD_SIZE * MAX_PAYLOAD_SIZE) / cwnd);
 		}
 	}
 

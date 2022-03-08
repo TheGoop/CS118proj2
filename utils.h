@@ -107,4 +107,17 @@ uint16_t incrementConnections(uint16_t c_id, uint16_t amount)
 {
     return c_id + amount;
 }
+
+int incrementCwnd(int cwnd, int amount)
+{
+    if (cwnd + amount <= MAX_CWND)
+    {
+        cwnd += amount;
+    }
+    else
+    {
+        cwnd = MAX_CWND;
+    }
+    return cwnd;
+}
 #endif
