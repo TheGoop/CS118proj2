@@ -25,6 +25,7 @@ Client: "RECV" <Sequence Number> <Acknowledgement Number> <Connection ID> <CWND>
 #include <time.h>
 #include <signal.h>
 #include <set>
+#include <vector>
 
 #include "constants.h"
 #include "utils.h"
@@ -50,9 +51,12 @@ struct reTransObject
 	int sockfd;
 	sockaddr *addr;
 	socklen_t addr_len;
-	unsigned char* buf;
+	unsigned char buf[MAX_PACKET_SIZE];
 	int arraySize;
+	uint32_t seq;
 };
+
+std::vector<reTransObject> sentPackets;
 
 // This is called after 10 seconds of nothing being received
 void outoftime(union sigval val)
@@ -72,12 +76,12 @@ void retransmit(union sigval val)
 	ssthresh = cwnd / 2;
 	cwnd = INITIAL_CWND;
 
-	lseek(filefd, *awaited_acks.begin(), SEEK_SET);
+	lseek(filefd, sentPackets[0].seq - 12346, SEEK_SET);
 
-	sendto(rts->sockfd, rts->buf, sizeof(rts->buf), MSG_CONFIRM, rts->addr, rts->addr_len);
+	sendto(sentPackets[0].sockfd, sentPackets[0].buf, sentPackets[0].arraySize, MSG_CONFIRM, sentPackets[0].addr, sentPackets[0].addr_len);
 	bool flags[3] = {false, false, false};
 	// cerr << "Total bytes sent: " << length << endl;
-	printClientMessage("SEND", *awaited_acks.begin(), 0, connection_id, cwnd, ssthresh, flags);
+	printClientMessage("SEND", sentPackets[0].seq, 0, connection_id, cwnd, ssthresh, flags);
 	// Do stuff to actually retransmit here. Maybe a variable that stores the last ACK'd byte?
 }
 
@@ -553,7 +557,17 @@ int main(int argc, char **argv)
 				}
 				counter += bytesRead;
 				totalBytes -= bytesRead;
-				awaited_acks.insert(incrementSeq(client_seq_no, bytesRead));
+				reTransObject temp;
+				temp.seq = client_seq_no;
+				uint32_t tempSeq = incrementSeq(client_seq_no, bytesRead);
+				awaited_acks.insert(tempSeq);
+				temp.sockfd = sockfd;
+				temp.addr = addr;
+				temp.addr_len = addr_len;
+				memset(temp.buf, '\0', HEADER_SIZE + bytesRead);
+				memcpy(buf, temp.buf, HEADER_SIZE + bytesRead);
+				temp.arraySize = HEADER_SIZE + bytesRead;
+				sentPackets.push_back(temp);
 				length = sendto(sockfd, buf, HEADER_SIZE + bytesRead, MSG_CONFIRM, addr, addr_len);
 				if (flags[0])
 				{
@@ -569,7 +583,7 @@ int main(int argc, char **argv)
 				retrans.sockfd = sockfd;
 				retrans.addr = addr;
 				retrans.addr_len = addr_len;
-				retrans.buf = buf;
+				//retrans.buf = buf;
 				argrtt.sival_ptr = &retrans;
 				sevrtt.sigev_value = argrtt;
 				if (timer_create(CLOCK_MONOTONIC, &sevrtt, &rttid) == -1)
@@ -639,6 +653,7 @@ int main(int argc, char **argv)
 		if (awaited_acks.find(server_ack_no) != awaited_acks.end())
 		{
 			awaited_acks.erase(server_ack_no);
+
 			if (cwnd < ssthresh)
 			{
 				cwnd = incrementCwnd(cwnd, MAX_PAYLOAD_SIZE);
@@ -696,6 +711,13 @@ int main(int argc, char **argv)
 		printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, cwnd, INITIAL_SSTHRESH, flags);
 
 		awaited_acks.erase(server_ack_no);
+		for (int x = 0; x < sentPackets.size(); x++)
+		{
+			if (sentPackets[x].seq == server_ack_no)
+			{
+				sentPackets.erase(sentPackets.begin() + x);
+			}
+		}
 		if (cwnd < ssthresh)
 		{
 			cwnd += 512;
