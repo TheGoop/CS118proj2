@@ -54,6 +54,7 @@ struct reTransObject
 	unsigned char buf[MAX_PACKET_SIZE];
 	int arraySize;
 	uint32_t seq;
+	uint32_t ackId;
 };
 
 std::vector<reTransObject> sentPackets;
@@ -561,6 +562,7 @@ int main(int argc, char **argv)
 				temp.seq = client_seq_no;
 				uint32_t tempSeq = incrementSeq(client_seq_no, bytesRead);
 				awaited_acks.insert(tempSeq);
+				temp.ackId = tempSeq;
 				temp.sockfd = sockfd;
 				temp.addr = addr;
 				temp.addr_len = addr_len;
@@ -713,7 +715,7 @@ int main(int argc, char **argv)
 		awaited_acks.erase(server_ack_no);
 		for (int x = 0; x < sentPackets.size(); x++)
 		{
-			if (sentPackets[x].seq == server_ack_no)
+			if (sentPackets[x].ackId == server_ack_no)
 			{
 				sentPackets.erase(sentPackets.begin() + x);
 			}
