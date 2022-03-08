@@ -292,10 +292,6 @@ int main(int argc, char **argv)
 	unsigned char buf[MAX_PACKET_SIZE];
 	memset(flags, '\0', NUM_FLAGS);
 
-	client_seq_no = server_ack_no;
-	client_ack_no = server_seq_no + 1;
-
-	createHeader(buf, client_seq_no, client_ack_no, connection_id, ACK, flags);
 	// open file to transfer from client to server
 	int filefd = open(fileName, O_RDONLY);
 	if (filefd == -1)
@@ -306,30 +302,6 @@ int main(int argc, char **argv)
 	struct stat fdStat;
 	fstat(filefd, &fdStat);
 	size_t bytesRead = 0, totalBytes = fdStat.st_size, counter = 0;
-
-	if (totalBytes >= MAX_PAYLOAD_SIZE)
-	{
-		bytesRead = read(filefd, buf + HEADER_SIZE, MAX_PAYLOAD_SIZE);
-	}
-	else
-	{
-		bytesRead = read(filefd, buf + HEADER_SIZE, totalBytes);
-	}
-
-	totalBytes -= bytesRead;
-	counter += bytesRead;
-
-	sendto(sockfd, buf, HEADER_SIZE + bytesRead, MSG_CONFIRM, addr, addr_len);
-
-	// cerr << "Total bytes sent: " << length << endl;
-	printClientMessage("SEND", client_seq_no, client_ack_no, connection_id, cwnd, INITIAL_SSTHRESH, flags);
-
-	memset(buf, '\0', HEADER_SIZE);
-	memset(flags, '\0', NUM_FLAGS);
-
-	recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
-
-	processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
 
 	timer_t timerid;
 	struct sigevent sev;
@@ -353,9 +325,7 @@ int main(int argc, char **argv)
 	its.it_interval.tv_sec = 0;
 	its.it_interval.tv_nsec = 0;
 
-	// cerr << "Total bytes received: " << length << endl;
-	printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, cwnd, INITIAL_SSTHRESH, flags);
-	cwnd += 512;
+	bool sentHandshakeACK = 0;
 	while (totalBytes > 0)
 	{
 		memset(buf, '\0', HEADER_SIZE);
@@ -370,8 +340,10 @@ int main(int argc, char **argv)
 				{
 					break;
 				}
-
-				createHeader(buf, client_seq_no, client_ack_no, connection_id, 0, flags);
+				if (!sentHandshakeACK)
+					createHeader(buf, client_seq_no, client_ack_no, connection_id, ACK, flags);
+				else
+					createHeader(buf, client_seq_no, client_ack_no, connection_id, 0, flags);
 
 				if (totalBytes >= MAX_PAYLOAD_SIZE)
 				{
@@ -385,6 +357,7 @@ int main(int argc, char **argv)
 				totalBytes -= bytesRead;
 				awaited_acks.insert(incrementSeq(client_seq_no, bytesRead));
 				sendto(sockfd, buf, HEADER_SIZE + bytesRead, MSG_CONFIRM, addr, addr_len);
+				sentHandshakeACK = true;
 				if (flags[0])
 				{
 					printClientMessage("SEND", client_seq_no, client_ack_no, connection_id, cwnd, INITIAL_SSTHRESH, flags);
