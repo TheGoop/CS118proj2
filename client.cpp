@@ -236,23 +236,7 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 			exit(1);
 		}
 
-		// RTT timer that counts to 0.5 seconds. When it reaches that, it calls retransmit and passes in the packet's clientSeq
-		if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
-		{
-			std::cerr << "ERROR: Timer set error" << std::endl;
-			close(filefd);
-			exit(1);
-		}
-
 		recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
-
-		// Disarm RTT
-		if (timer_settime(rttid, 0, &its2, NULL) == -1)
-		{
-			cerr << "ERROR: Timer set error" << endl;
-			// close(filefd);
-			exit(1);
-		}
 
 		processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
 
@@ -484,7 +468,7 @@ int main(int argc, char **argv)
 	retrans.sockfd = sockfd;
 	retrans.addr = addr;
 	retrans.addr_len = addr_len;
-	memcpy(retrans.buf, buf, HEADER_SIZE + bytesRead);
+	retrans.buf = buf;
 	argrtt.sival_ptr = &retrans;
 	sevrtt.sigev_value = argrtt;
 	if (timer_create(CLOCK_MONOTONIC, &sevrtt, &rttid) == -1)
@@ -554,6 +538,10 @@ int main(int argc, char **argv)
 				}
 
 				createHeader(buf, client_seq_no, client_ack_no, connection_id, 0, flags);
+				// if (client_seq_no == 12858)
+				// {
+				// 	cerr << "Set timer for 12858" << endl;
+				// }
 
 				if (totalBytes >= MAX_PAYLOAD_SIZE)
 				{
@@ -596,7 +584,7 @@ int main(int argc, char **argv)
 		rts.sockfd = sockfd;
 		rts.addr = addr;
 		rts.addr_len = addr_len;
-		memcpy(retrans.buf, buf, HEADER_SIZE + bytesRead);
+		retrans.buf = buf;
 		argrtt.sival_ptr = &rts;
 		sevrtt.sigev_value = argrtt;
 		if (timer_create(CLOCK_MONOTONIC, &sevrtt, &rttid) == -1)
@@ -655,7 +643,7 @@ int main(int argc, char **argv)
 		rts.sockfd = sockfd;
 		rts.addr = addr;
 		rts.addr_len = addr_len;
-		memcpy(retrans.buf, buf, HEADER_SIZE + bytesRead);
+		retrans.buf = buf;
 		argrtt.sival_ptr = &rts;
 		sevrtt.sigev_value = argrtt;
 		if (timer_create(CLOCK_MONOTONIC, &sevrtt, &rttid) == -1)
