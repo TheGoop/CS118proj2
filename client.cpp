@@ -62,7 +62,7 @@ std::vector<reTransObject> sentPackets;
 // This is called after 10 seconds of nothing being received
 void outoftime(union sigval val)
 {
-	cerr << "10 seconds exceeded" << endl;
+	// cerr << "10 seconds exceeded" << endl;
 	// if (filefd != NULL)
 	close(filefd);
 	exit(1);
@@ -70,7 +70,7 @@ void outoftime(union sigval val)
 
 void retransmit(union sigval val)
 {
-	std::cerr << "Retransmit packet from latest ACK'd byte" << std::endl;
+	// std::cerr << "Retransmit packet from latest ACK'd byte" << std::endl;
 
 	ssthresh = cwnd / 2;
 	cwnd = INITIAL_CWND;
@@ -163,12 +163,12 @@ void handshake(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 		// close(filefd);
 		exit(1);
 	}
-	if (timer_settime(rttid, 0, &its2, NULL) == -1)
-	{
-		cerr << "ERROR: Timer set error" << endl;
-		// close(filefd);
-		exit(1);
-	}
+	// if (timer_settime(rttid, 0, &its2, NULL) == -1)
+	// {
+	// 	cerr << "ERROR: Timer set error" << endl;
+	// 	// close(filefd);
+	// 	exit(1);
+	// }
 
 	processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
 
@@ -275,12 +275,12 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 		{ // FIN-ACK, immediately send ACK to close connection
 			// Disarm the RTT since we expect no more ACKs
 			// cerr << "Disarm RTT" << endl;
-			if (timer_settime(rttid, 0, &its2, NULL) == -1)
-			{
-				std::cerr << "ERROR: RTT disarm error" << std::endl;
-				close(filefd);
-				exit(1);
-			}
+			// if (timer_settime(rttid, 0, &its2, NULL) == -1)
+			// {
+			// 	std::cerr << "ERROR: RTT disarm error" << std::endl;
+			// 	close(filefd);
+			// 	exit(1);
+			// }
 
 			memset(flags, '\0', NUM_FLAGS);
 			memset(buf, '\0', HEADER_SIZE);
@@ -323,12 +323,12 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 			recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 
 			// Disarm RTT
-			if (timer_settime(rttid, 0, &its2, NULL) == -1)
-			{
-				cerr << "ERROR: Timer set error" << endl;
-				// close(filefd);
-				exit(1);
-			}
+			// if (timer_settime(rttid, 0, &its2, NULL) == -1)
+			// {
+			// 	cerr << "ERROR: Timer set error" << endl;
+			// 	// close(filefd);
+			// 	exit(1);
+			// }
 
 			processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
 
@@ -491,12 +491,12 @@ int main(int argc, char **argv)
 	length = recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 
 	// Disarm RTT
-	if (timer_settime(rttid, 0, &its2, NULL) == -1)
-	{
-		cerr << "ERROR: Timer set error" << endl;
-		// close(filefd);
-		exit(1);
-	}
+	// if (timer_settime(rttid, 0, &its2, NULL) == -1)
+	// {
+	// 	cerr << "ERROR: Timer set error" << endl;
+	// 	// close(filefd);
+	// 	exit(1);
+	// }
 
 	processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
 
@@ -630,12 +630,12 @@ int main(int argc, char **argv)
 		length = recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 
 		// Disarm RTT
-		if (timer_settime(rttid, 0, &its2, NULL) == -1)
-		{
-			cerr << "ERROR: Timer set error" << endl;
-			// close(filefd);
-			exit(1);
-		}
+		// if (timer_settime(rttid, 0, &its2, NULL) == -1)
+		// {
+		// 	cerr << "ERROR: Timer set error" << endl;
+		// 	// close(filefd);
+		// 	exit(1);
+		// }
 
 		processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
 
@@ -711,13 +711,13 @@ int main(int argc, char **argv)
 
 		length = recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 
-		// Disarm RTT
-		if (timer_settime(rttid, 0, &its2, NULL) == -1)
-		{
-			cerr << "ERROR: Timer set error" << endl;
-			// close(filefd);
-			exit(1);
-		}
+		// // Disarm RTT
+		// if (timer_settime(rttid, 0, &its2, NULL) == -1)
+		// {
+		// 	cerr << "ERROR: Timer set error" << endl;
+		// 	// close(filefd);
+		// 	exit(1);
+		// }
 
 		processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
 		printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, cwnd, INITIAL_SSTHRESH, flags);
@@ -737,7 +737,7 @@ int main(int argc, char **argv)
         {
             awaited_acks.erase(less_than[i]);
         }
-		
+
 		for (int x = 0; x < sentPackets.size(); x++)
 		{
 			if (sentPackets[x].ackId == server_ack_no)
@@ -753,6 +753,14 @@ int main(int argc, char **argv)
 		{
 			cwnd += (512 * 512) / cwnd;
 		}
+	}
+
+	// Disarm RTT timer
+	if (timer_settime(rttid, 0, &its2, NULL) == -1)
+	{
+		cerr << "ERROR: Timer set error" << endl;
+		// close(filefd);
+		exit(1);
 	}
 
 	close(filefd);
