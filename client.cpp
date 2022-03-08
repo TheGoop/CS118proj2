@@ -86,8 +86,6 @@ void retransmit(union sigval val)
 	}
 	cerr << endl;
 
-	lseek(filefd, sentPackets[0].seq - 12346, SEEK_SET);
-
 	int length = sendto(sentPackets[0].sockfd, sentPackets[0].buf, sentPackets[0].arraySize, MSG_CONFIRM, sentPackets[0].addr, sentPackets[0].addr_len);
 	bool flags[3] = {false, false, false};
 	// cerr << "Total bytes sent: " << length << endl;
@@ -164,13 +162,13 @@ void handshake(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 	// 	exit(1);
 	// }
 
-	// // RTT timer that counts to 0.5 seconds. When it reaches that, it calls retransmit and passes in the packet's clientSeq
-	// if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
-	// {
-	// 	std::cerr << "ERROR: Timer set error" << std::endl;
-	// 	close(filefd);
-	// 	exit(1);
-	// }
+	// RTT timer that counts to 0.5 seconds. When it reaches that, it calls retransmit and passes in the packet's clientSeq
+	if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
+	{
+		std::cerr << "ERROR: Timer set error" << std::endl;
+		close(filefd);
+		exit(1);
+	}
 
 	recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 
@@ -600,13 +598,12 @@ int main(int argc, char **argv)
 				// }
 
 				// RTT timer that counts to 0.5 seconds. When it reaches that, it calls retransmit and passes in the packet's clientSeq
-				if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
-				{
-					std::cerr << "ERROR: Timer set error" << std::endl;
-					close(filefd);
-					exit(1);
-				}
-				cerr << "Set timer for " << client_seq_no << endl;
+				// if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
+				// {
+				// 	std::cerr << "ERROR: Timer set error" << std::endl;
+				// 	close(filefd);
+				// 	exit(1);
+				// }
 
 				memset(buf, '\0', HEADER_SIZE);
 				memset(flags, '\0', NUM_FLAGS);
@@ -638,12 +635,13 @@ int main(int argc, char **argv)
 		// }
 
 		// // RTT timer that counts to 0.5 seconds. When it reaches that, it calls retransmit and passes in the packet's clientSeq
-		// if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
-		// {
-		// 	std::cerr << "ERROR: Timer set error" << std::endl;
-		// 	close(filefd);
-		// 	exit(1);
-		// }
+		if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
+		{
+			std::cerr << "ERROR: Timer set error" << std::endl;
+			close(filefd);
+			exit(1);
+		}
+		cerr << "Set timer for " << client_seq_no << endl;
 
 		length = recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 
@@ -699,22 +697,14 @@ int main(int argc, char **argv)
 		// }
 
 		// // RTT timer that counts to 0.5 seconds. When it reaches that, it calls retransmit and passes in the packet's clientSeq
-		// if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
-		// {
-		// 	std::cerr << "ERROR: Timer set error" << std::endl;
-		// 	close(filefd);
-		// 	exit(1);
-		// }
-
-		length = recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
-
-		// Disarm RTT
-		if (timer_settime(rttid, 0, &its2, NULL) == -1)
+		if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
 		{
-			cerr << "ERROR: Timer set error" << endl;
-			// close(filefd);
+			std::cerr << "ERROR: Timer set error" << std::endl;
+			close(filefd);
 			exit(1);
 		}
+
+		length = recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 
 		processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
 		printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, cwnd, INITIAL_SSTHRESH, flags);
@@ -724,6 +714,7 @@ int main(int argc, char **argv)
 		{
 			if (sentPackets[x].ackId == server_ack_no)
 			{
+				cerr << "Erasing " << sentPackets[x].ackId << endl;
 				sentPackets.erase(sentPackets.begin() + x);
 			}
 		}
@@ -738,6 +729,14 @@ int main(int argc, char **argv)
 	}
 
 	close(filefd);
+
+	// Disarm RTT
+	if (timer_settime(rttid, 0, &its2, NULL) == -1)
+	{
+		cerr << "ERROR: Timer set error" << endl;
+		// close(filefd);
+		exit(1);
+	}
 
 	client_seq_no = server_ack_no;
 	teardown(sockfd, addr, addr_len, server_seq_no, server_ack_no, connection_id, client_seq_no, client_ack_no, flags, cwnd);
