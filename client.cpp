@@ -744,14 +744,17 @@ int main(int argc, char **argv)
 			{
 				sentPackets.erase(sentPackets.begin() + x);
 			}
+		
 		}
 		if (cwnd < ssthresh)
 		{
-			cwnd += 512;
+			// cwnd += 512;
+			incrementCwnd(cwnd, 512);
 		}
 		else
 		{
-			cwnd += (512 * 512) / cwnd;
+			incrementCwnd(cwnd, (512*512)/cwnd);
+			// cwnd += (512 * 512) / cwnd;
 		}
 	}
 
