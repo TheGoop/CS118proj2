@@ -129,27 +129,27 @@ void handshake(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 		exit(1);
 	}
 
-	// Reset RTT with new sival
-	struct reTransObject retrans;
-	retrans.sockfd = sockfd;
-	retrans.addr = addr;
-	retrans.addr_len = addr_len;
-	retrans.buf = buf;
-	argrtt.sival_ptr = &retrans;
-	sevrtt.sigev_value = argrtt;
-	if (timer_create(CLOCK_MONOTONIC, &sevrtt, &rttid) == -1)
-	{
-		cerr << "ERROR: Timer create error" << endl;
-		exit(1);
-	}
+	// // Reset RTT with new sival
+	// struct reTransObject retrans;
+	// retrans.sockfd = sockfd;
+	// retrans.addr = addr;
+	// retrans.addr_len = addr_len;
+	// retrans.buf = buf;
+	// argrtt.sival_ptr = &retrans;
+	// sevrtt.sigev_value = argrtt;
+	// if (timer_create(CLOCK_MONOTONIC, &sevrtt, &rttid) == -1)
+	// {
+	// 	cerr << "ERROR: Timer create error" << endl;
+	// 	exit(1);
+	// }
 
-	// RTT timer that counts to 0.5 seconds. When it reaches that, it calls retransmit and passes in the packet's clientSeq
-	if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
-	{
-		std::cerr << "ERROR: Timer set error" << std::endl;
-		close(filefd);
-		exit(1);
-	}
+	// // RTT timer that counts to 0.5 seconds. When it reaches that, it calls retransmit and passes in the packet's clientSeq
+	// if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
+	// {
+	// 	std::cerr << "ERROR: Timer set error" << std::endl;
+	// 	close(filefd);
+	// 	exit(1);
+	// }
 
 	recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 
@@ -222,19 +222,19 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 		// memset(buf, '\0', HEADER_SIZE);
 		// memset(flags, '\0', NUM_FLAGS);
 
-		// Reset RTT with new sival
-		struct reTransObject retrans;
-		retrans.sockfd = sockfd;
-		retrans.addr = addr;
-		retrans.addr_len = addr_len;
-		retrans.buf = buf;
-		argrtt.sival_ptr = &retrans;
-		sevrtt.sigev_value = argrtt;
-		if (timer_create(CLOCK_MONOTONIC, &sevrtt, &rttid) == -1)
-		{
-			cerr << "ERROR: Timer create error" << endl;
-			exit(1);
-		}
+		// // Reset RTT with new sival
+		// struct reTransObject retrans;
+		// retrans.sockfd = sockfd;
+		// retrans.addr = addr;
+		// retrans.addr_len = addr_len;
+		// retrans.buf = buf;
+		// argrtt.sival_ptr = &retrans;
+		// sevrtt.sigev_value = argrtt;
+		// if (timer_create(CLOCK_MONOTONIC, &sevrtt, &rttid) == -1)
+		// {
+		// 	cerr << "ERROR: Timer create error" << endl;
+		// 	exit(1);
+		// }
 
 		recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 
@@ -295,27 +295,27 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 		}
 		else if (flags[0])
 		{ // ACK, need to wait to receive FIN, then can send ACK and close connection
-			// Reset RTT with new sival
-			struct reTransObject rts;
-			rts.sockfd = sockfd;
-			rts.addr = addr;
-			rts.addr_len = addr_len;
-			rts.buf = buf;
-			argrtt.sival_ptr = &rts;
-			sevrtt.sigev_value = argrtt;
-			if (timer_create(CLOCK_MONOTONIC, &sevrtt, &rttid) == -1)
-			{
-				cerr << "ERROR: Timer create error" << endl;
-				exit(1);
-			}
+			// // Reset RTT with new sival
+			// struct reTransObject rts;
+			// rts.sockfd = sockfd;
+			// rts.addr = addr;
+			// rts.addr_len = addr_len;
+			// rts.buf = buf;
+			// argrtt.sival_ptr = &rts;
+			// sevrtt.sigev_value = argrtt;
+			// if (timer_create(CLOCK_MONOTONIC, &sevrtt, &rttid) == -1)
+			// {
+			// 	cerr << "ERROR: Timer create error" << endl;
+			// 	exit(1);
+			// }
 
-			// RTT timer that counts to 0.5 seconds. When it reaches that, it calls retransmit and passes in the packet's clientSeq
-			if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
-			{
-				std::cerr << "ERROR: Timer set error" << std::endl;
-				close(filefd);
-				exit(1);
-			}
+			// // RTT timer that counts to 0.5 seconds. When it reaches that, it calls retransmit and passes in the packet's clientSeq
+			// if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
+			// {
+			// 	std::cerr << "ERROR: Timer set error" << std::endl;
+			// 	close(filefd);
+			// 	exit(1);
+			// }
 
 			recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 
@@ -463,27 +463,27 @@ int main(int argc, char **argv)
 	memset(buf, '\0', HEADER_SIZE);
 	memset(flags, '\0', NUM_FLAGS);
 
-	// Reset RTT with new sival
-	struct reTransObject retrans;
-	retrans.sockfd = sockfd;
-	retrans.addr = addr;
-	retrans.addr_len = addr_len;
-	retrans.buf = buf;
-	argrtt.sival_ptr = &retrans;
-	sevrtt.sigev_value = argrtt;
-	if (timer_create(CLOCK_MONOTONIC, &sevrtt, &rttid) == -1)
-	{
-		cerr << "ERROR: Timer create error" << endl;
-		exit(1);
-	}
+	// // Reset RTT with new sival
+	// struct reTransObject retrans;
+	// retrans.sockfd = sockfd;
+	// retrans.addr = addr;
+	// retrans.addr_len = addr_len;
+	// retrans.buf = buf;
+	// argrtt.sival_ptr = &retrans;
+	// sevrtt.sigev_value = argrtt;
+	// if (timer_create(CLOCK_MONOTONIC, &sevrtt, &rttid) == -1)
+	// {
+	// 	cerr << "ERROR: Timer create error" << endl;
+	// 	exit(1);
+	// }
 
-	// RTT timer that counts to 0.5 seconds. When it reaches that, it calls retransmit and passes in the packet's clientSeq
-	if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
-	{
-		std::cerr << "ERROR: Timer set error" << std::endl;
-		close(filefd);
-		exit(1);
-	}
+	// // RTT timer that counts to 0.5 seconds. When it reaches that, it calls retransmit and passes in the packet's clientSeq
+	// if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
+	// {
+	// 	std::cerr << "ERROR: Timer set error" << std::endl;
+	// 	close(filefd);
+	// 	exit(1);
+	// }
 
 	length = recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 
@@ -563,6 +563,28 @@ int main(int argc, char **argv)
 				{
 					printClientMessage("SEND", client_seq_no, 0, connection_id, cwnd, INITIAL_SSTHRESH, flags);
 				}
+				
+				// Reset RTT with new sival
+				struct reTransObject retrans;
+				retrans.sockfd = sockfd;
+				retrans.addr = addr;
+				retrans.addr_len = addr_len;
+				retrans.buf = buf;
+				argrtt.sival_ptr = &retrans;
+				sevrtt.sigev_value = argrtt;
+				if (timer_create(CLOCK_MONOTONIC, &sevrtt, &rttid) == -1)
+				{
+					cerr << "ERROR: Timer create error" << endl;
+					exit(1);
+				}
+
+				// RTT timer that counts to 0.5 seconds. When it reaches that, it calls retransmit and passes in the packet's clientSeq
+				if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
+				{
+					std::cerr << "ERROR: Timer set error" << std::endl;
+					close(filefd);
+					exit(1);
+				}
 
 				memset(buf, '\0', HEADER_SIZE);
 				memset(flags, '\0', NUM_FLAGS);
@@ -579,27 +601,27 @@ int main(int argc, char **argv)
 			exit(1);
 		}
 
-		// Reset RTT with new sival
-		struct reTransObject rts;
-		rts.sockfd = sockfd;
-		rts.addr = addr;
-		rts.addr_len = addr_len;
-		retrans.buf = buf;
-		argrtt.sival_ptr = &rts;
-		sevrtt.sigev_value = argrtt;
-		if (timer_create(CLOCK_MONOTONIC, &sevrtt, &rttid) == -1)
-		{
-			cerr << "ERROR: Timer create error" << endl;
-			exit(1);
-		}
+		// // Reset RTT with new sival
+		// struct reTransObject rts;
+		// rts.sockfd = sockfd;
+		// rts.addr = addr;
+		// rts.addr_len = addr_len;
+		// retrans.buf = buf;
+		// argrtt.sival_ptr = &rts;
+		// sevrtt.sigev_value = argrtt;
+		// if (timer_create(CLOCK_MONOTONIC, &sevrtt, &rttid) == -1)
+		// {
+		// 	cerr << "ERROR: Timer create error" << endl;
+		// 	exit(1);
+		// }
 
-		// RTT timer that counts to 0.5 seconds. When it reaches that, it calls retransmit and passes in the packet's clientSeq
-		if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
-		{
-			std::cerr << "ERROR: Timer set error" << std::endl;
-			close(filefd);
-			exit(1);
-		}
+		// // RTT timer that counts to 0.5 seconds. When it reaches that, it calls retransmit and passes in the packet's clientSeq
+		// if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
+		// {
+		// 	std::cerr << "ERROR: Timer set error" << std::endl;
+		// 	close(filefd);
+		// 	exit(1);
+		// }
 
 		length = recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 
@@ -638,27 +660,27 @@ int main(int argc, char **argv)
 	// cerr << "Sending FIN..." << endl;
 	while (awaited_acks.size() != 0)
 	{
-		// Reset RTT with new sival
-		struct reTransObject rts;
-		rts.sockfd = sockfd;
-		rts.addr = addr;
-		rts.addr_len = addr_len;
-		retrans.buf = buf;
-		argrtt.sival_ptr = &rts;
-		sevrtt.sigev_value = argrtt;
-		if (timer_create(CLOCK_MONOTONIC, &sevrtt, &rttid) == -1)
-		{
-			cerr << "ERROR: Timer create error" << endl;
-			exit(1);
-		}
+		// // Reset RTT with new sival
+		// struct reTransObject rts;
+		// rts.sockfd = sockfd;
+		// rts.addr = addr;
+		// rts.addr_len = addr_len;
+		// retrans.buf = buf;
+		// argrtt.sival_ptr = &rts;
+		// sevrtt.sigev_value = argrtt;
+		// if (timer_create(CLOCK_MONOTONIC, &sevrtt, &rttid) == -1)
+		// {
+		// 	cerr << "ERROR: Timer create error" << endl;
+		// 	exit(1);
+		// }
 
-		// RTT timer that counts to 0.5 seconds. When it reaches that, it calls retransmit and passes in the packet's clientSeq
-		if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
-		{
-			std::cerr << "ERROR: Timer set error" << std::endl;
-			close(filefd);
-			exit(1);
-		}
+		// // RTT timer that counts to 0.5 seconds. When it reaches that, it calls retransmit and passes in the packet's clientSeq
+		// if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
+		// {
+		// 	std::cerr << "ERROR: Timer set error" << std::endl;
+		// 	close(filefd);
+		// 	exit(1);
+		// }
 
 		length = recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 
