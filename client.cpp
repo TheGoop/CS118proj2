@@ -642,7 +642,29 @@ int main(int argc, char **argv)
 		printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, cwnd, INITIAL_SSTHRESH, flags);
 		if (awaited_acks.find(server_ack_no) != awaited_acks.end())
 		{
-			awaited_acks.erase(server_ack_no);
+			vector<set<int>::iterator> less_than;
+            set<int>::iterator itr;
+            for (itr = awaited_acks.begin(); itr != awaited_acks.end(); itr++)
+            {
+                if (*itr <= server_ack_no)
+                {
+                    less_than.push_back(itr);
+                }
+            }
+            // then erase all of those from awaited_acks
+            for (int i = 0; i < less_than.size(); i++)
+            {
+                awaited_acks.erase(less_than[i]);
+            }
+
+            for (int x = 0; x < sentPackets.size(); x++)
+            {
+                if (sentPackets[x].ackId == server_ack_no)
+                {
+                    // cerr << "Erasing " << sentPackets[x].ackId << endl;
+                    sentPackets.erase(sentPackets.begin() + x);
+                }
+            }
 
 			if (cwnd < ssthresh)
 			{
@@ -700,7 +722,22 @@ int main(int argc, char **argv)
 		processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
 		printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, cwnd, INITIAL_SSTHRESH, flags);
 
-		awaited_acks.erase(server_ack_no);
+		// get list of iterators less than or equal to server_ack_no
+        vector<set<int>::iterator> less_than;
+        set<int>::iterator itr;
+        for (itr = awaited_acks.begin(); itr != awaited_acks.end(); itr++)
+        {
+            if (*itr <= server_ack_no)
+            {
+                less_than.push_back(itr);
+            }
+        }
+        // then erase all of those from awaited_acks
+        for (int i = 0; i < less_than.size(); i++)
+        {
+            awaited_acks.erase(less_than[i]);
+        }
+		
 		for (int x = 0; x < sentPackets.size(); x++)
 		{
 			if (sentPackets[x].ackId == server_ack_no)
