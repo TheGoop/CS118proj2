@@ -588,7 +588,7 @@ int main(int argc, char **argv)
 					close(filefd);
 					exit(1);
 				}
-				cerr << "Set timer for " << client_seq_no << endl;
+				// cerr << "Set timer for " << client_seq_no << endl;
 
 				memset(buf, '\0', HEADER_SIZE);
 				memset(flags, '\0', NUM_FLAGS);
