@@ -70,9 +70,7 @@ void outoftime(union sigval val)
 
 void retransmit(union sigval val)
 {
-	//std::cerr << "Retransmit packet from latest ACK'd byte" << std::endl;
-	reTransObject *rts;
-	rts = static_cast<reTransObject *>(val.sival_ptr);
+	std::cerr << "Retransmit packet from latest ACK'd byte" << std::endl;
 
 	ssthresh = cwnd / 2;
 	cwnd = INITIAL_CWND;
@@ -543,10 +541,6 @@ int main(int argc, char **argv)
 				}
 
 				createHeader(buf, client_seq_no, client_ack_no, connection_id, 0, flags);
-				// if (client_seq_no == 12858)
-				// {
-				// 	cerr << "Set timer for 12858" << endl;
-				// }
 
 				if (totalBytes >= MAX_PAYLOAD_SIZE)
 				{
@@ -581,18 +575,11 @@ int main(int argc, char **argv)
 				}
 				
 				// Reset RTT with new sival
-				struct reTransObject retrans;
-				retrans.sockfd = sockfd;
-				retrans.addr = addr;
-				retrans.addr_len = addr_len;
-				//retrans.buf = buf;
-				argrtt.sival_ptr = &retrans;
-				sevrtt.sigev_value = argrtt;
-				if (timer_create(CLOCK_MONOTONIC, &sevrtt, &rttid) == -1)
-				{
-					cerr << "ERROR: Timer create error" << endl;
-					exit(1);
-				}
+				// if (timer_create(CLOCK_MONOTONIC, &sevrtt, &rttid) == -1)
+				// {
+				// 	cerr << "ERROR: Timer create error" << endl;
+				// 	exit(1);
+				// }
 
 				// RTT timer that counts to 0.5 seconds. When it reaches that, it calls retransmit and passes in the packet's clientSeq
 				if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
@@ -601,6 +588,7 @@ int main(int argc, char **argv)
 					close(filefd);
 					exit(1);
 				}
+				cerr << "Set timer for " << client_seq_no << endl;
 
 				memset(buf, '\0', HEADER_SIZE);
 				memset(flags, '\0', NUM_FLAGS);
