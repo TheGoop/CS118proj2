@@ -43,6 +43,8 @@ timer_t rttid;
 struct sigevent sevrtt;
 struct itimerspec itsrtt;
 
+bool testLoss = true;
+
 // This is called after 10 seconds of nothing being received
 void outoftime(union sigval val)
 {
@@ -167,10 +169,11 @@ int main(int argc, char **argv)
         printServerMessage("RECV", currClientSeq, currClientAck, currID, flags);
 
         // Test RTT on client side
-        // if (currClientSeq == 12858)
-        // {
-        //     sleep(1);
-        // }
+        if (currClientSeq == 12858)
+        {
+            testLoss = false;
+            sleep(1);
+        }
 
         // Timer that counts to 10 seconds
         if (timer_settime(timerid, 0, &its, NULL) == -1)

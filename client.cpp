@@ -75,13 +75,31 @@ void retransmit(union sigval val)
 	ssthresh = cwnd / 2;
 	cwnd = INITIAL_CWND;
 
+	if (sentPackets.empty())
+	{
+		cerr << "sentPackets is empty" << endl;
+		return;
+	}
+	for(reTransObject obj : sentPackets)
+	{
+		cerr << obj.seq << ' ';
+	}
+	cerr << endl;
+
 	lseek(filefd, sentPackets[0].seq - 12346, SEEK_SET);
 
 	int length = sendto(sentPackets[0].sockfd, sentPackets[0].buf, sentPackets[0].arraySize, MSG_CONFIRM, sentPackets[0].addr, sentPackets[0].addr_len);
 	bool flags[3] = {false, false, false};
 	// cerr << "Total bytes sent: " << length << endl;
 	printClientMessage("SEND", sentPackets[0].seq, 0, connection_id, cwnd, ssthresh, flags);
-	// Do stuff to actually retransmit here. Maybe a variable that stores the last ACK'd byte?
+
+	// RTT timer that counts to 0.5 seconds. When it reaches that, it calls retransmit and passes in the packet's clientSeq
+	if (timer_settime(rttid, 0, &itsrtt, NULL) == -1)
+	{
+		std::cerr << "ERROR: Timer set error" << std::endl;
+		close(filefd);
+		exit(1);
+	}
 }
 
 void handshake(int sockfd, struct sockaddr *addr, socklen_t addr_len,
@@ -643,6 +661,7 @@ int main(int argc, char **argv)
 		if (awaited_acks.find(server_ack_no) != awaited_acks.end())
 		{
 			awaited_acks.erase(server_ack_no);
+			// sentPackets.(server_ack_no);
 
 			if (cwnd < ssthresh)
 			{
