@@ -153,8 +153,6 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 	printClientMessage("SEND", client_seq_no, 0, connection_id, cwnd, INITIAL_SSTHRESH, flags);
 	while (1)
 	{
-		// memset(buf, '\0', HEADER_SIZE);
-		// memset(flags, '\0', NUM_FLAGS);
 
 		recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
 
@@ -179,14 +177,6 @@ void teardown(int sockfd, struct sockaddr *addr, socklen_t addr_len,
 			}
 			isTimerSet = true;
 		}
-		// memset(buf, '\0', HEADER_SIZE);
-		// memset(flags, '\0', NUM_FLAGS);
-		// recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
-
-		// processHeader(buf, server_seq_no, server_ack_no, connection_id, flags);
-
-		// // cerr << "Total bytes received: " << length << endl;
-		// printClientMessage("RECV", server_seq_no, server_ack_no, connection_id, cwnd, INITIAL_SSTHRESH, flags);
 
 		if (flags[0] && flags[2])
 		{ // FIN-ACK, immediately send ACK to close connection
@@ -401,14 +391,6 @@ int main(int argc, char **argv)
 		}
 		usleep(50000);
 	}
-	// cerr << counter << " bytes read from file" << endl;
-
-	// if (fdStat.st_size != server_ack_no - INITIAL_CLIENT_SEQ - 1)
-	// {
-	// 	cerr << "Server has not successfully received all bytes" << endl;
-	// 	exit(1);
-	// }
-	// cerr << "Sending FIN..." << endl;
 	while (awaited_acks.size() != 0)
 	{
 		recvfrom(sockfd, buf, HEADER_SIZE, 0, addr, &addr_len);
