@@ -61,7 +61,7 @@ std::vector<reTransObject> sentPackets;
 // This is called after 10 seconds of nothing being received
 void outoftime(union sigval val)
 {
-	// cerr << "10 seconds exceeded" << endl;
+	cerr << "10 seconds exceeded" << endl;
 	// if (filefd != NULL)
 	close(filefd);
 	exit(1);
@@ -69,7 +69,7 @@ void outoftime(union sigval val)
 
 void retransmit(union sigval val)
 {
-	std::cerr << "Retransmit packet from latest ACK'd byte" << std::endl;
+	//std::cerr << "Retransmit packet from latest ACK'd byte" << std::endl;
 	reTransObject *rts;
 	rts = static_cast<reTransObject *>(val.sival_ptr);
 
@@ -78,7 +78,7 @@ void retransmit(union sigval val)
 
 	lseek(filefd, sentPackets[0].seq - 12346, SEEK_SET);
 
-	sendto(sentPackets[0].sockfd, sentPackets[0].buf, sentPackets[0].arraySize, MSG_CONFIRM, sentPackets[0].addr, sentPackets[0].addr_len);
+	int length = sendto(sentPackets[0].sockfd, sentPackets[0].buf, sentPackets[0].arraySize, MSG_CONFIRM, sentPackets[0].addr, sentPackets[0].addr_len);
 	bool flags[3] = {false, false, false};
 	// cerr << "Total bytes sent: " << length << endl;
 	printClientMessage("SEND", sentPackets[0].seq, 0, connection_id, cwnd, ssthresh, flags);
@@ -565,7 +565,7 @@ int main(int argc, char **argv)
 				temp.addr = addr;
 				temp.addr_len = addr_len;
 				memset(temp.buf, '\0', HEADER_SIZE + bytesRead);
-				memcpy(buf, temp.buf, HEADER_SIZE + bytesRead);
+				memcpy(temp.buf, buf, HEADER_SIZE + bytesRead);
 				temp.arraySize = HEADER_SIZE + bytesRead;
 				sentPackets.push_back(temp);
 				length = sendto(sockfd, buf, HEADER_SIZE + bytesRead, MSG_CONFIRM, addr, addr_len);
